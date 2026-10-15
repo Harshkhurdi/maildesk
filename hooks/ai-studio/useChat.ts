@@ -13,25 +13,7 @@ import {
 } from "@/lib/ai-studio/storage/db";
 import { streamChatClient } from "@/lib/ai-studio/chat/streamClient";
 import { type ChatSettings, DEFAULT_SETTINGS } from "@/lib/ai-studio/chat/settings";
-import type { ChatMessageParam, ContentPart } from "@/lib/ai-studio/openrouter/types";
-
-/** Builds the OpenRouter content (string or multipart) for a stored message. */
-function toChatParam(m: StoredMessage): ChatMessageParam {
-  if (!m.attachments || m.attachments.length === 0) {
-    return { role: m.role, content: m.content };
-  }
-  // Docs recommend text first, then files/images.
-  const parts: ContentPart[] = [];
-  if (m.content) parts.push({ type: "text", text: m.content });
-  for (const a of m.attachments) {
-    if (a.kind === "image") {
-      parts.push({ type: "image_url", image_url: { url: a.url } });
-    } else {
-      parts.push({ type: "file", file: { filename: a.name, file_data: a.url } });
-    }
-  }
-  return { role: m.role, content: parts };
-}
+import { conversationChatRequest,serializeChatRequest } from "@/lib/ai-studio/chat/outgoing-request";
 
 /**
  * Orchestrates conversations: IndexedDB persistence, streaming sends,
@@ -76,6 +58,9 @@ export function useChat(
 
   const runStream = useCallback(
     async (conv: Conversation, history: StoredMessage[]) => {
+      const request = conversationChatRequest(conv.modelId,history,settingsRef.current);
+      try { serializeChatRequest(request); }
+      catch (err) { setError(err instanceof Error ? err.message : "Check your chat before sending."); return; }
       const assistant: StoredMessage = {
         id: newId(),
         role: "assistant",
@@ -94,21 +79,9 @@ export function useChat(
       let reasoning = "";
       let completionTokens: number | undefined;
 
-      const s = settingsRef.current;
-      const chatMessages: ChatMessageParam[] = [
-        ...(s.systemPrompt.trim()
-          ? [{ role: "system" as const, content: s.systemPrompt.trim() }]
-          : []),
-        ...history.map(toChatParam),
-      ];
-
       try {
         const result = await streamChatClient({
-          model: conv.modelId,
-          messages: chatMessages,
-          temperature: s.temperature,
-          maxTokens: s.maxTokens ?? undefined,
-          jsonMode: s.jsonMode,
+          ...request,
           signal: controller.signal,
           onDelta: (d) => {
             if (d.reasoning) reasoning += d.reasoning;
@@ -151,7 +124,7 @@ export function useChat(
 
   const send = useCallback(
     (text: string, attachments: Attachment[] = []) => {
-      if (!selectedModelId || busy || abortRef.current) return;
+      if (!selectedModelId || busy || abortRef.current) return false;
       const userMsg: StoredMessage = {
         id: newId(),
         role: "user",
@@ -171,10 +144,11 @@ export function useChat(
           createdAt: now,
           updatedAt: now,
         };
-        setActiveId(conv.id);
       }
 
       const history = [...conv.messages, userMsg];
+      try { serializeChatRequest(conversationChatRequest(selectedModelId,history,settingsRef.current)); }
+      catch (err) { setError(err instanceof Error ? err.message : "Check your chat before sending."); return false; }
       const updated: Conversation = {
         ...conv,
         modelId: selectedModelId,
@@ -182,8 +156,10 @@ export function useChat(
         messages: history,
         updatedAt: Date.now(),
       };
+      setActiveId(conv.id);
       persist(updated);
       void runStream(updated, history);
+      return true;
     },
     [activeConversation, busy, persist, runStream, selectedModelId],
   );

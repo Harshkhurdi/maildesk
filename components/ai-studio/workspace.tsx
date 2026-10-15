@@ -294,7 +294,7 @@ export default function HomePage() {
                 hint="Verified free models · Enter to send · Shift+Enter for a new line"
                 onSubmit={(text, attachments) => {
                   if (!selectedId && models.length > 0) setSelectedId(models[0].id);
-                  chat.send(text, attachments);
+                  return chat.send(text, attachments);
                 }}
                 onStop={chat.stop}
               />

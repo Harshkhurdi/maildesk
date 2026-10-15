@@ -4,6 +4,7 @@ import { FileText,Upload,ZoomIn,ZoomOut,RotateCw,ChevronLeft,ChevronRight,Search
 import type { PDFDocumentProxy,PDFDocumentLoadingTask,RenderTask,TextLayer } from "pdfjs-dist";
 import { download } from "@/lib/exporters";
 import { safeUrl } from "@/lib/task-rules";
+import { pdfPageText,pdfSearchMatch } from "@/lib/pdf-search";
 import "@/vendor/pdf-text-layer.css";
 export type PdfSource={blob:Blob;name:string;origin:"local"|"gmail"};
 const LIMIT=100*1024*1024;
@@ -50,7 +51,7 @@ export default function PdfViewer({source,onSource}:{source:PdfSource|null;onSou
       renderTask=p.render({canvas:c,canvasContext:context,viewport:view,transform:outputScale===1?undefined:[outputScale,0,0,outputScale,0,0]});
       await renderTask.promise;if(!active)return;
       const content=await p.getTextContent();if(!active)return;
-      const text=content.items.map(item=>"str" in item?item.str+(item.hasEOL?"\n":" "):"").join("");setPageText(text);textCache.current.set(page,text);
+      const text=pdfPageText(content.items);setPageText(text);textCache.current.set(page,text);
       const lib=await import("pdfjs-dist");if(!active)return;
       textLayer.current!.style.setProperty("--total-scale-factor",String(scale*(view.userUnit||1)));
       layer=new lib.TextLayer({container:textLayer.current!,textContentSource:content,viewport:view});
@@ -62,10 +63,10 @@ export default function PdfViewer({source,onSource}:{source:PdfSource|null;onSou
   },[pdf,page,fit,zoom,rotation,width]);
   useEffect(()=>{
     if(!pdf||!query.trim()){setHits([]);setSearching(false);setSearchProgress(0);return;}
-    let active=true;const term=query.trim().toLocaleLowerCase();setSearching(true);setHits([]);setSearchProgress(0);
+    let active=true;setSearching(true);setHits([]);setSearchProgress(0);
     const timer=setTimeout(()=>void(async()=>{const result:Hit[]=[];try{for(let n=1;n<=pdf.numPages;n++){
-      if(!active)return;let text=textCache.current.get(n);if(text===undefined){const p=await pdf.getPage(n);const c=await p.getTextContent();text=c.items.map(item=>"str" in item?item.str+" ":"").join("");if(active&&textCache.current.size<1000)textCache.current.set(n,text);}
-      if(!active)return;const lower=text.toLocaleLowerCase(),at=lower.indexOf(term);if(at>=0){let count=0,pos=0;while((pos=lower.indexOf(term,pos))>=0){count++;pos+=term.length;}result.push({page:n,count,snippet:(at>45?"…":"")+text.slice(Math.max(0,at-45),at+term.length+100)+(at+term.length+100<text.length?"…":"")});}
+      if(!active)return;let text=textCache.current.get(n);if(text===undefined){const p=await pdf.getPage(n);const c=await p.getTextContent();text=pdfPageText(c.items);if(active&&textCache.current.size<1000)textCache.current.set(n,text);}
+      if(!active)return;const match=pdfSearchMatch(text,query);if(match)result.push({page:n,...match});
       setSearchProgress(n);setHits([...result]);if(n%10===0)await new Promise(r=>setTimeout(r,0));
     }}catch{if(active)setError("Search could not read every page. Results may be incomplete.");}finally{if(active)setSearching(false);}})(),300);
     return()=>{active=false;clearTimeout(timer);};

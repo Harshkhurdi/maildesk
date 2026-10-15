@@ -51,7 +51,7 @@ Neon Auth uses email OTP. Register `https://maildesk-theta.vercel.app` explicitl
 2. Create an ignored `.env.local` pointing at an isolated development database and Auth branch. Do not point local fixtures at production.
 3. `node --env-file=.env.local scripts/migrate.mjs` (use the direct connection when available).
 4. `npm run dev` opens the app at http://127.0.0.1:5174 . Real sign-in is required; no test bypass is shipped.
-5. `npm run typecheck` and `npm run build` validate the release. `npm test` runs the pure policy, calculation, authentication-error, and request-validation checks.
+5. `npm run typecheck` and `npm run build` validate the release. `npm test` runs deterministic policy, calculation, import, request, call-engine, and isolated integration regression checks. See `docs/CODE_AUDIT.md` for the latest audit fixes and verification boundaries.
 6. Apply reviewed Drizzle migrations to the separate production database, then `vercel --prod --yes --scope harsh-1c69` from this folder. Inspect the returned deployment and verify the stable URL before claiming success.
 
 The initial migration was verified against an isolated local PostgreSQL database before it was applied to the new, empty production database. No fictional production records were seeded. Local tests used a temporary owner and guest overlay which was removed before the release build. API scripts inherited from the Sites edition require that edition's local fixture harness; they are not production test scripts.

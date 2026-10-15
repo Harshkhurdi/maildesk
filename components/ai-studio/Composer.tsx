@@ -15,7 +15,7 @@ export interface ComposerHandle {
 }
 
 const MAX_FILES = 4;
-const MAX_BYTES = 500 * 1024; // 5 MB per file
+const MAX_BYTES = 500 * 1024;
 
 async function toAttachment(file: File): Promise<Attachment | null> {
   if (file.size > MAX_BYTES) return null;
@@ -38,7 +38,7 @@ interface ComposerProps {
   busy?: boolean;
   hint?: string;
   visionReady: boolean; // selected model accepts images
-  onSubmit: (text: string, attachments: Attachment[]) => void;
+  onSubmit: (text: string, attachments: Attachment[]) => boolean;
   onStop?: () => void;
 }
 
@@ -116,12 +116,11 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
     const text = innerRef.current?.value.trim() ?? "";
     if ((!text && attachments.length === 0) || disabled || busy) return;
     if(attachments.some(a=>a.kind==="image")&&!visionReady){setAttachError("Choose a vision model before sending images.");return;}
+    if (!onSubmit(text,attachments)) return;
     if (innerRef.current) innerRef.current.value = "";
     autoresize();
-    const atts = attachments;
     setAttachments([]);
     setAttachError(null);
-    onSubmit(text, atts);
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {

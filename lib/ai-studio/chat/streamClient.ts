@@ -1,6 +1,7 @@
 "use client";
 
 import type { ChatMessageParam, StreamDelta } from "@/lib/ai-studio/openrouter/types";
+import { serializeChatRequest } from "./outgoing-request";
 
 export interface StreamChatClientOptions {
   model: string;
@@ -27,15 +28,7 @@ export async function streamChatClient(options: StreamChatClientOptions): Promis
     method: "POST",
     headers: { "Content-Type": "application/json" },
     signal: options.signal,
-    body: JSON.stringify({
-      model: options.model,
-      messages: options.messages,
-      ...(options.jsonMode ? { jsonMode: true } : {}),
-      ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
-      ...(options.maxTokens !== undefined ? { maxTokens: options.maxTokens } : {}),
-      // Ask OpenRouter to include real token usage in the final chunk.
-
-    }),
+    body: serializeChatRequest(options),
   });
 
   if (!res.ok || !res.body) {
@@ -56,13 +49,14 @@ export async function streamChatClient(options: StreamChatClientOptions): Promis
   let reasoning = "";
   let finishReason: string | null = null;
   let completionTokens: number | undefined;
+  let completed = false;
 
   const handleFrame = (frame: string) => {
     for (const line of frame.split("\n")) {
       const trimmed = line.trim();
       if (!trimmed.startsWith("data:")) continue;
       const payload = trimmed.slice(5).trim();
-      if (payload === "[DONE]") return;
+      if (payload === "[DONE]") { completed = true; return; }
       try {
         const parsed = JSON.parse(payload) as {
           error?: {message?:string};
@@ -85,7 +79,7 @@ export async function streamChatClient(options: StreamChatClientOptions): Promis
         };
         if (delta.content) content += delta.content;
         if (delta.reasoning) reasoning += delta.reasoning;
-        if (delta.finish_reason) finishReason = delta.finish_reason;
+        if (delta.finish_reason) { finishReason = delta.finish_reason; completed = true; }
         options.onDelta(delta);
       } catch(e) {
         if(!(e instanceof SyntaxError))throw e;
@@ -106,7 +100,10 @@ export async function streamChatClient(options: StreamChatClientOptions): Promis
     }
   }
 
+  buffer += decoder.decode();
   if(buffer.trim())handleFrame(buffer);
+  options.signal?.throwIfAborted();
+  if(!completed)throw Error("The reply ended before it was complete. Your partial reply is kept; retry or choose another free model.");
   if(!content.trim()&&!reasoning.trim())throw Error("The model returned no answer. Try another free model.");
   return { content, reasoning, finishReason, completionTokens };
 }

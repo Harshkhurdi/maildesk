@@ -1,4 +1,4 @@
-import { and,eq,sql,count,inArray } from "drizzle-orm";
+import { and,eq,gt,asc,sql,count,inArray } from "drizzle-orm";
 import { accounts,mail,tasks } from "@/db/schema";
 import { getDb } from "@/db";
 import { config,decrypt,now,unbase64,HttpError } from "@/lib/server";
@@ -14,9 +14,18 @@ async function googleJson(url:string,init:RequestInit={}){
 }
 export async function accessToken(account:AccountRow){
   const secret=await decrypt(account.token),c=config();
-  const response=await fetch("https://oauth2.googleapis.com/token",{method:"POST",body:new URLSearchParams({client_id:c.clientId!,client_secret:c.clientSecret!,refresh_token:secret.refreshToken,grant_type:"refresh_token"}),signal:AbortSignal.timeout(20000)});
-  if(!response.ok)throw new GmailError(401,"Google access expired or was revoked. Reconnect this account.");const token=await response.json() as any;
-  if(!token.access_token)throw new GmailError(502,"Google did not return an access token.");return token.access_token as string;
+  let response:Response;
+  try{response=await fetch("https://oauth2.googleapis.com/token",{method:"POST",body:new URLSearchParams({client_id:c.clientId!,client_secret:c.clientSecret!,refresh_token:secret.refreshToken,grant_type:"refresh_token"}),signal:AbortSignal.timeout(20000)});}
+  catch{throw new GmailError(503,"Google could not be reached to renew access. Your connection and progress are saved; try again later.");}
+  const token=await response.json().catch(()=>null) as {error?:string;access_token?:unknown}|null;
+  if(!response.ok){
+    if(response.status===429)throw new GmailError(429,"Google limited access renewal. Your connection and progress are saved; try again later.");
+    if(response.status>=500)throw new GmailError(503,"Google could not renew access right now. Your connection and progress are saved; try again later.");
+    if(token?.error==="invalid_grant")throw new GmailError(401,"Google access expired or was revoked. Reconnect this account.");
+    if(token?.error==="invalid_client"||token?.error==="unauthorized_client")throw new GmailError(503,"Google connection settings need attention. Ask the workspace owner to check the OAuth client configuration.");
+    throw new GmailError(502,"Google could not renew access. Your connection and progress are saved; try again later.");
+  }
+  if(typeof token?.access_token!=="string"||!token.access_token)throw new GmailError(502,"Google did not return an access token. Try again later.");return token.access_token;
 }
 export function decodePart(value:string){try{return new TextDecoder().decode(unbase64(value));}catch{return "";}}
 export function htmlToText(html:string){return html.replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,(_match,href,label)=>{const link=safeUrl(href.replace(/&amp;/g,"&"));return label+(link?" ("+link+")":"");}).replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi,"").replace(/<br\s*\/?\s*>|<\/(?:p|div|li|tr|h[1-6])>/gi,"\n").replace(/<[^>]*>/g,"").replace(/&nbsp;/g," ").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&amp;/g,"&").replace(/\n{3,}/g,"\n\n");}
@@ -32,15 +41,20 @@ export async function syncBatch(account:AccountRow,leaseId:string){
   const api=(path:string)=>googleJson(`https://gmail.googleapis.com/gmail/v1/users/me/${path}`,{headers});
   let phase=account.phase,pageToken=account.pageToken,historyId=account.historyId,nextHistoryId=account.nextHistoryId;
   let queue:string[]=JSON.parse(account.queue),threadIds:string[]=[],total=account.total;
-  if(phase==="full"){
+  if(phase==="full"||phase==="rescan"){
     const p=new URLSearchParams({maxResults:"5",includeSpamTrash:"true"});if(pageToken)p.set("pageToken",pageToken);
     const list=await api(`threads?${p}`);threadIds=(list.threads??[]).map((t:{id:string})=>t.id);pageToken=list.nextPageToken??null;
+  }else if(phase==="reconcile"){
+    // Listing pagination is not a mailbox snapshot. Verify cached threads in
+    // bounded batches, and remove content only when Gmail itself returns 404.
+    const cached=await db.selectDistinct({threadId:mail.threadId}).from(mail).where(and(eq(mail.accountId,account.id),pageToken?gt(mail.threadId,pageToken):undefined)).orderBy(asc(mail.threadId)).limit(5);
+    threadIds=cached.map(row=>row.threadId);pageToken=threadIds.at(-1)??pageToken;
   }else{
     if(!queue.length){
       const p=new URLSearchParams({maxResults:"5",startHistoryId:historyId??""});if(pageToken)p.set("pageToken",pageToken);
       let changes;
       try{changes=await api(`history?${p}`);}catch(e){
-        if(e instanceof GmailError&&e.status===404){const profile=await api("profile");await db.update(accounts).set({phase:"full",pageToken:null,queue:"[]",historyId:String(profile.historyId),nextHistoryId:null,total:Number(profile.messagesTotal)||0,error:"Gmail history expired. A full rescan is needed; your existing tasks are kept.",leaseUntil:0,leaseId:null}).where(and(eq(accounts.id,account.id),eq(accounts.leaseId,leaseId)));return {done:false,rescan:true,processed:0};}throw e;
+        if(e instanceof GmailError&&e.status===404){const profile=await api("profile");const reset=await db.update(accounts).set({phase:"rescan",pageToken:null,queue:"[]",historyId:String(profile.historyId),nextHistoryId:null,total:Number(profile.messagesTotal)||0,error:"Gmail history expired. A full rescan and source check are needed; your existing tasks are kept.",leaseUntil:0,leaseId:null}).where(and(eq(accounts.id,account.id),eq(accounts.leaseId,leaseId))).returning({id:accounts.id});if(!reset.length)throw new HttpError(409,"Another scan replaced this scan. Refresh the account status.");return {done:false,rescan:true,processed:0};}throw e;
       }
       queue=[...new Set<string>((changes.history??[]).flatMap((h:any)=>[...(h.messages??[]),...(h.messagesAdded??[]).map((x:any)=>x.message),...(h.messagesDeleted??[]).map((x:any)=>x.message),...(h.labelsAdded??[]).map((x:any)=>x.message),...(h.labelsRemoved??[]).map((x:any)=>x.message)].map((m:any)=>m.threadId).filter(Boolean)))];
       pageToken=changes.nextPageToken??null;nextHistoryId=String(changes.historyId??historyId);
@@ -70,8 +84,9 @@ export async function syncBatch(account:AccountRow,leaseId:string){
     }else if(latest){await db.update(tasks).set({sourceChanged:1,reason:"The latest message may change whether this task is pending. Review the source thread.",updatedAt:now()}).where(and(eq(tasks.accountId,account.id),eq(tasks.threadId,threadId),sql`${tasks.sourceId} != ${latest.id}`));}
   }
   let done=false;
-  if(phase==="full"&&!pageToken){phase="catchup";}
-  else if(phase!=="full"&&!pageToken&&!queue.length){phase="ready";historyId=nextHistoryId??historyId;nextHistoryId=null;done=true;}
+  if((phase==="full"||phase==="rescan")&&!pageToken){phase=phase==="rescan"?"reconcile":"catchup";}
+  else if(phase==="reconcile"&&threadIds.length<5){phase="catchup";pageToken=null;}
+  else if(!["full","rescan","reconcile"].includes(phase)&&!pageToken&&!queue.length){phase="ready";historyId=nextHistoryId??historyId;nextHistoryId=null;done=true;}
   const [scanned]=await db.select({n:count()}).from(mail).where(eq(mail.accountId,account.id));
   if(done){const profile=await api("profile");total=Number(profile.messagesTotal)||total;}
   const result=await db.update(accounts).set({phase,pageToken,historyId,nextHistoryId,queue:JSON.stringify(queue),scanned:scanned.n,total,syncedAt:done?now():account.syncedAt,error:null,leaseUntil:0,leaseId:null}).where(and(eq(accounts.id,account.id),eq(accounts.leaseId,leaseId))).returning({id:accounts.id});
