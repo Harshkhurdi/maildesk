@@ -33,3 +33,15 @@ The production build and TypeScript checks pass. Final test totals and post-depl
 Gmail credentials and individual account consents, X developer access, merchant APIs and a TURN relay remain external setup requirements. A new Google project was reported created by the owner as `maildesk-harsh-20261015`; Google Cloud Console fails to load in the test browser, so API/client setup is not yet confirmed. No credentials are included in this repository.
 
 Automatic merchant prices/orders are not implemented. Shopping remains official search links and manually saved quotes. Arbitrary PDF compatibility, every network condition, and upstream AI model/image availability cannot be established by these tests. No claim is made that every integration is operational.
+
+## Guest mode and security follow-up
+
+Added a public `/guest` workspace and “Continue as guest” on the email sign-in page. It creates no server identity and does not bypass any private API guard. Guest tasks, office files, code projects, shopping details and web bookmarks use a separate, bounded browser storage key. PDFs remain local. Linked file/task records are validated; stale file/tool revisions, invalid content, quota errors and corrupt saved data are surfaced without silently replacing the saved copy. A guest backup can be exported from Accounts & settings. Guest data is shared by people using that browser profile, does not sync across devices, and is not automatically moved into an email account.
+
+Gmail, AI Studio, X and conversation rooms retain real sign-in requirements. Tests exercise guest mounting with an existing session and verify that it makes no private workspace request; the local tool adapter never calls a server.
+
+Reviewed non-breaking dependency updates reduce the audit report from 19 findings (11 high, 7 moderate, 1 low) to 13 (7 high, 6 moderate; no critical). Existing top-level dependency versions are unchanged. Remaining findings include inherited build/lint dependencies and exporter dependencies; automatic fixes propose breaking downgrades. They remain documented rather than forcing a framework/exporter downgrade.
+
+Google credentials were configured privately on Vercel using the owner's downloaded client JSON. The owner enabled Gmail API and added the three known test addresses. Google reached the exact read-only consent screen. The first callback did not produce a connected account; a fresh attempt reached Google's passkey identity check. The owner subsequently requested leaving that setup, so actual Gmail syncing remains unverified. The approved second QA room received a real guest reply and owner read receipt; the newer voice/video re-test was not completed before the owner asked to leave it. The earlier successful call audit is separately documented above.
+
+Synthetic records from this follow-up use `Maildesk QA2 6c42`. These remain in the live workspace for review; no unrelated records were read or deleted. Guest verification uses a separate `Guest QA` label in browser-only storage.

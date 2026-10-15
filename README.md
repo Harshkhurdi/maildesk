@@ -14,6 +14,10 @@ Use the sign-in page to request a one-time code for your email. The personal wor
 
 Gmail task detection uses rules and manual review. Maildesk does not automatically send email bodies to AI. AI Studio sends only the prompts and attachments you deliberately submit. It allows verified free model variants and applies zero-price provider limits; external free-service quotas still apply.
 
+## Guest access without email
+
+Choose **Continue as guest** on the sign-in page, or open https://maildesk-theta.vercel.app/guest. Guest tasks, documents, presentations, spreadsheets, PDFs, code projects, shopping details and bookmarks work without an email account. Saved guest work stays in that browser profile, is accessible to anyone using it, and does not sync across devices. Export your work before clearing browser data. Guest records are separate from signed-in data and are not automatically imported when you sign in. Connected Gmail, AI, X and conversation rooms still require verified sign-in.
+
 ## Tools
 
 | Tool | What you can use |
