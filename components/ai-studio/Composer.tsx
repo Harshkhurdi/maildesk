@@ -157,7 +157,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               <button
                 onClick={() => setAttachments((prev) => prev.filter((_, j) => j !== i))}
                 aria-label={`Remove ${a.name}`}
-                className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 items-center justify-center rounded-full bg-ink text-app group-hover/att:flex"
+                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-ink text-app"
               >
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
                   <path d="M18 6 6 18M6 6l12 12" />
