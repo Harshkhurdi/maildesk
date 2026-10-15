@@ -43,7 +43,7 @@ Gmail task detection uses rules and manual review. Maildesk does not automatical
 
 Required server settings: `DATABASE_URL` (pooled), `DATABASE_URL_UNPOOLED` (migrations), `NEON_AUTH_BASE_URL`, `NEON_AUTH_COOKIE_SECRET` (32+ random characters), `WORKSPACE_OWNER_EMAIL`, `TOKEN_ENCRYPTION_KEY` (base64url encoded random 32 bytes), `APP_ORIGIN` (exact production HTTPS origin). `OPENROUTER_API_KEY` enables AI Studio. Optional Google/X/relay settings are described above. Never prefix secrets with `NEXT_PUBLIC_`, commit env files, or include them in a downloaded backup.
 
-Neon Auth uses email OTP. The service accepts the production origin; successful owner/guest email-code sign-in still requires their actual inboxes. Follow Neon's production email-delivery guidance and configure custom SMTP for long-term production use: https://neon.com/docs/auth/production-checklist.md . The Neon account itself may separately request email activation before its dashboard can be managed.
+Neon Auth uses email OTP. Register `https://maildesk-theta.vercel.app` explicitly in Neon → Settings → Better Auth → Domains. The OTP-sending endpoint checks this allowlist; a rejected incorrect OTP does not prove that code delivery works. Successful sign-in requires the actual code from the owner or guest inbox. See https://neon.com/docs/auth/guides/configure-domains . Follow Neon's production email-delivery guidance and configure custom SMTP for long-term production use: https://neon.com/docs/auth/production-checklist.md . The Neon account itself may separately request email activation before its dashboard can be managed.
 
 ## Development and deployment
 
@@ -51,7 +51,7 @@ Neon Auth uses email OTP. The service accepts the production origin; successful 
 2. Create an ignored `.env.local` pointing at an isolated development database and Auth branch. Do not point local fixtures at production.
 3. `node --env-file=.env.local scripts/migrate.mjs` (use the direct connection when available).
 4. `npm run dev` opens the app at http://127.0.0.1:5174 . Real sign-in is required; no test bypass is shipped.
-5. `npm run typecheck` and `npm run build` validate the release. `node --test tests/core.test.mjs tests/conversation-policy.test.mjs tests/ai-policy.test.mjs tests/ai-stream.test.mjs tests/utilities.test.mjs` runs the pure policy/calculation checks.
+5. `npm run typecheck` and `npm run build` validate the release. `npm test` runs the pure policy, calculation, authentication-error, and request-validation checks.
 6. Apply reviewed Drizzle migrations to the separate production database, then `vercel --prod --yes --scope harsh-1c69` from this folder. Inspect the returned deployment and verify the stable URL before claiming success.
 
 The initial migration was verified against an isolated local PostgreSQL database before it was applied to the new, empty production database. No fictional production records were seeded. Local tests used a temporary owner and guest overlay which was removed before the release build. API scripts inherited from the Sites edition require that edition's local fixture harness; they are not production test scripts.
@@ -62,7 +62,7 @@ The initial migration was verified against an isolated local PostgreSQL database
 - 19 task/file API assertions, 43 conversation/access/call-state checks, and 22 utility/access/revision/URL/X-setup checks passed against isolated local PostgreSQL with two temporary test users.
 - Browser verification covered the original overview design, runnable code preview, project saving, shopping search links, private address and quote saving (₹60 + ₹10 fees = ₹70), saved bookmarks, and real Google search results.
 - Native Next.js 16.4.1 production build passed after replacing browser-incompatible PowerPoint Node imports with browser stubs. Text slides and notes remain supported; no unsupported filesystem/network image access is exposed in the browser.
-- Managed Auth rejects an invalid OTP for the production origin. Successful owner/guest email sign-in, actual Gmail sync, authenticated production office exports, external X feeds, merchant live prices/orders, and calls across restrictive networks require real credentials/accounts or configuration and were not verified as live integrations.
+- The initial migration checked rejection of an invalid OTP. That check did not establish successful code delivery. The subsequent production audit fixed the Neon trusted-domain setting and verified actual code delivery, owner sign-in, session restoration, task saving/completion, office editing and real DOCX/PPTX/XLSX downloads, local PDF controls, code preview, bookmarks, Google results, and manual quote totals. See `docs/LIVE_AUDIT.md` for evidence and remaining integration limits.
 
 The Next.js and sharp audit findings were cleared by the framework update. The dependency audit still flags build/exporter dependencies, including image-size and uuid. This is not a clean dependency audit; Maildesk’s basic export editors do not accept image-parser input or expose the affected UUID buffer APIs. Review those upstream findings before extending the exporters or opening development tools beyond localhost.
 

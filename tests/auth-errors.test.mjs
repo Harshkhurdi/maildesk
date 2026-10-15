@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {authErrorMessage} from '../lib/auth-errors.ts';
+test('origin configuration errors identify the supported address and required repair',()=>{for(const input of ['Invalid origin','Invalid domain','Origin not allowed']){const text=authErrorMessage(input);assert.match(text,/https:\/\/maildesk-theta\.vercel\.app/);assert.match(text,/register that address/);}});
+test('bad or expired codes explain how to retry without claiming a configuration failure',()=>{for(const input of ['Invalid OTP','Invalid code','OTP expired'])assert.match(authErrorMessage(input),/latest code/);assert.equal(authErrorMessage('Too many requests'),'Too many requests');});

@@ -1,5 +1,6 @@
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { getDb } from "@/db";
+import { parseJsonObject } from "@/lib/request-json";
 export function config() {
   const e=process.env;
   return { clientId:e.GOOGLE_CLIENT_ID,clientSecret:e.GOOGLE_CLIENT_SECRET,key:e.TOKEN_ENCRYPTION_KEY,origin:e.APP_ORIGIN||(e.VERCEL_PROJECT_PRODUCTION_URL?`https://${e.VERCEL_PROJECT_PRODUCTION_URL}`:undefined),ownerEmail:e.WORKSPACE_OWNER_EMAIL,turnKey:e.CF_TURN_KEY_ID,turnToken:e.CF_TURN_API_TOKEN };
@@ -19,7 +20,7 @@ export async function guard(request?:Request,shared=false) {
   }
   return { user,db:getDb() };
 }
-export async function body(request:Request) {const text=await request.text();if(text.length>1100000)throw new HttpError(413,"This file is too large. The editor limit is 1 MB.");try{return JSON.parse(text);}catch{throw new HttpError(400,"Invalid request.");}}
+export async function body(request:Request) {const text=await request.text();if(text.length>1100000)throw new HttpError(413,"This file is too large. The editor limit is 1 MB.");try{return parseJsonObject(text);}catch{throw new HttpError(400,"Invalid request. Send a JSON object.");}}
 export function failure(e:unknown){if(e instanceof HttpError)return json({error:e.message},e.status);console.error("Workspace request failed", e instanceof Error ? e.name : "error");return json({error:"The workspace could not finish this request. Your last saved data has been kept. Try again."},500);}
 export function uid(){return crypto.randomUUID();}
 export function now(){return new Date().toISOString();}

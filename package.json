@@ -13,7 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/migrate.mjs",
     "predev": "node scripts/prepare-pdf-assets.mjs",
-    "prebuild": "node scripts/prepare-pdf-assets.mjs"
+    "prebuild": "node scripts/prepare-pdf-assets.mjs",
+    "test": "node --test tests/core.test.mjs tests/conversation-policy.test.mjs tests/ai-policy.test.mjs tests/ai-stream.test.mjs tests/utilities.test.mjs tests/auth-errors.test.mjs tests/request-json.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
