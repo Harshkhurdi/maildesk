@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+const origin='http://127.0.0.1:5173';
+const anonymous=await fetch(origin+'/api/workspace');assert.equal(anonymous.status,401);
+const login=await fetch(origin+'/signin-with-chatgpt?return_to=%2F',{redirect:'manual'});
+const cookie=login.headers.getSetCookie().map(c=>c.split(';')[0]).join('; ');assert.ok(cookie);
+async function request(path,method='GET',payload,extra={}){const r=await fetch(origin+path,{method,headers:{cookie,...(payload?{'Content-Type':'application/json',Origin:origin}:{}),...extra},body:payload?JSON.stringify(payload):undefined});const text=await r.text();let data;try{data=JSON.parse(text);}catch{data={error:text};}return {status:r.status,data};}
+const w=await request('/api/workspace');assert.equal(w.status,200);assert.equal(w.data.configured,false);
+const task={title:'QA local task',status:'pending',priority:'normal',due:'2026-10-20',category:'general',notes:'Local verification only',taskUrl:null,snoozedUntil:null};
+assert.equal((await request('/api/tasks','POST',task,{Origin:'https://evil.example'})).status,403);
+assert.equal((await request('/api/tasks','POST',{...task,due:'2026-02-31'})).status,400);
+assert.equal((await request('/api/tasks','POST',{...task,taskUrl:'javascript:alert(1)'})).status,400);
+const t=await request('/api/tasks','POST',task);assert.equal(t.status,201);assert.ok(t.data.task.id);
+const update=await request('/api/tasks','PATCH',{...task,id:t.data.task.id,status:'done'});assert.equal(update.status,200);assert.equal(update.data.task.status,'done');
+assert.equal((await request('/api/tasks','PATCH',{...task,id:'another-user-task'})).status,404);
+assert.equal((await request('/api/files','POST',{title:'Bad link',kind:'document',content:'{"html":"hello"}',taskId:'another-user-task',mailId:null})).status,404);
+const create=await request('/api/files','POST',{title:'QA local document',kind:'document',content:'{"html":"<h1>Test document</h1><p>Saved correctly.</p>"}',taskId:t.data.task.id,mailId:null});assert.equal(create.status,201);const file=create.data.file;
+const saved=await request('/api/files','PATCH',{...file,title:'QA updated document'});assert.equal(saved.status,200);assert.equal(saved.data.file.revision,2);
+const conflict=await request('/api/files','PATCH',{...file,title:'Stale tab'});assert.equal(conflict.status,409);
+const w2=await request('/api/workspace');assert.ok(w2.data.files.some(f=>f.title==='QA updated document'));assert.ok(w2.data.tasks.some(x=>x.id===t.data.task.id&&x.status==='done'));
+assert.equal((await request('/api/gmail/connect','POST',{})).status,503);
+assert.equal((await request('/api/gmail/sync','POST',{accountId:'unconnected'})).status,503);
+assert.equal((await request('/api/mail')).data.total,0);
+assert.equal((await request('/api/files','DELETE',{id:file.id})).status,200);
+assert.equal((await request('/api/files','DELETE',{id:'another-user-file'})).status,404);
+console.log('19 local API assertions passed: sign-in, CSRF, validation, ownership, persistence, revision conflicts, unconfigured Gmail, deletion.');

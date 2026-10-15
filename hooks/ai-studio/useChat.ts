@@ -1,0 +1,269 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type Attachment,
+  type Conversation,
+  type StoredMessage,
+  deleteConversation as dbDelete,
+  getAllConversations,
+  newId,
+  saveConversation,
+  titleFromText,
+} from "@/lib/ai-studio/storage/db";
+import { streamChatClient } from "@/lib/ai-studio/chat/streamClient";
+import { type ChatSettings, DEFAULT_SETTINGS } from "@/lib/ai-studio/chat/settings";
+import type { ChatMessageParam, ContentPart } from "@/lib/ai-studio/openrouter/types";
+
+/** Builds the OpenRouter content (string or multipart) for a stored message. */
+function toChatParam(m: StoredMessage): ChatMessageParam {
+  if (!m.attachments || m.attachments.length === 0) {
+    return { role: m.role, content: m.content };
+  }
+  // Docs recommend text first, then files/images.
+  const parts: ContentPart[] = [];
+  if (m.content) parts.push({ type: "text", text: m.content });
+  for (const a of m.attachments) {
+    if (a.kind === "image") {
+      parts.push({ type: "image_url", image_url: { url: a.url } });
+    } else {
+      parts.push({ type: "file", file: { filename: a.name, file_data: a.url } });
+    }
+  }
+  return { role: m.role, content: parts };
+}
+
+/**
+ * Orchestrates conversations: IndexedDB persistence, streaming sends,
+ * stop / regenerate / edit-and-resend.
+ */
+export function useChat(
+  selectedModelId: string | null,
+  settings: ChatSettings = DEFAULT_SETTINGS,
+) {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<StoredMessage[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [streamingId, setStreamingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(()=>()=>{abortRef.current?.abort();},[]);
+
+  // Latest settings without re-creating stream callbacks.
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+
+  useEffect(() => {
+    getAllConversations().then(setConversations).catch(() => undefined);
+  }, []);
+
+  const activeConversation =
+    conversations.find((c) => c.id === activeId) ?? null;
+
+  const persist = useCallback((conv: Conversation) => {
+    saveConversation(conv)
+      .then(() =>
+        setConversations((prev) =>
+          [conv, ...prev.filter((c) => c.id !== conv.id)].sort(
+            (a, b) => b.updatedAt - a.updatedAt,
+          ),
+        ),
+      )
+      .catch((err) => setError(`Save failed: ${String(err)}`));
+  }, []);
+
+  const runStream = useCallback(
+    async (conv: Conversation, history: StoredMessage[]) => {
+      const assistant: StoredMessage = {
+        id: newId(),
+        role: "assistant",
+        content: "",
+        model: conv.modelId,
+        createdAt: Date.now(),
+      };
+      setMessages([...history, assistant]);
+      setStreamingId(assistant.id);
+      setBusy(true);
+      setError(null);
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+      let content = "";
+      let reasoning = "";
+      let completionTokens: number | undefined;
+
+      const s = settingsRef.current;
+      const chatMessages: ChatMessageParam[] = [
+        ...(s.systemPrompt.trim()
+          ? [{ role: "system" as const, content: s.systemPrompt.trim() }]
+          : []),
+        ...history.map(toChatParam),
+      ];
+
+      try {
+        const result = await streamChatClient({
+          model: conv.modelId,
+          messages: chatMessages,
+          temperature: s.temperature,
+          maxTokens: s.maxTokens ?? undefined,
+          jsonMode: s.jsonMode,
+          signal: controller.signal,
+          onDelta: (d) => {
+            if (d.reasoning) reasoning += d.reasoning;
+            if (d.content) content += d.content;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistant.id ? { ...m, content, reasoning } : m,
+              ),
+            );
+          },
+        });
+        completionTokens = result.completionTokens;
+      } catch (err) {
+        if (!(err instanceof Error && err.name === "AbortError")) {
+          setError(err instanceof Error ? err.message : "Generation failed");
+        }
+      } finally {
+        const finalHistory: StoredMessage[] = [
+          ...history,
+          {
+            ...assistant,
+            content,
+            reasoning,
+            tokens: completionTokens,
+          },
+        ];
+        setMessages(finalHistory);
+        setStreamingId(null);
+        setBusy(false);
+        abortRef.current = null;
+        persist({
+          ...conv,
+          messages: finalHistory,
+          updatedAt: Date.now(),
+        });
+      }
+    },
+    [persist],
+  );
+
+  const send = useCallback(
+    (text: string, attachments: Attachment[] = []) => {
+      if (!selectedModelId || busy || abortRef.current) return;
+      const userMsg: StoredMessage = {
+        id: newId(),
+        role: "user",
+        content: text,
+        attachments: attachments.length > 0 ? attachments : undefined,
+        createdAt: Date.now(),
+      };
+
+      let conv = activeConversation;
+      if (!conv) {
+        const now = Date.now();
+        conv = {
+          id: newId(),
+          title: titleFromText(text),
+          modelId: selectedModelId,
+          messages: [],
+          createdAt: now,
+          updatedAt: now,
+        };
+        setActiveId(conv.id);
+      }
+
+      const history = [...conv.messages, userMsg];
+      const updated: Conversation = {
+        ...conv,
+        modelId: selectedModelId,
+        title: conv.messages.length === 0 ? titleFromText(text) : conv.title,
+        messages: history,
+        updatedAt: Date.now(),
+      };
+      persist(updated);
+      void runStream(updated, history);
+    },
+    [activeConversation, busy, persist, runStream, selectedModelId],
+  );
+
+  const stop = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
+  const regenerate = useCallback(() => {
+    if (!activeConversation || busy || abortRef.current) return;
+    let lastUserIdx = -1;
+    for (let i = activeConversation.messages.length - 1; i >= 0; i--) {
+      if (activeConversation.messages[i].role === "user") {
+        lastUserIdx = i;
+        break;
+      }
+    }
+    if (lastUserIdx === -1) return;
+    void runStream({...activeConversation,modelId:selectedModelId??activeConversation.modelId}, activeConversation.messages.slice(0, lastUserIdx + 1));
+  }, [activeConversation, busy, runStream,selectedModelId]);
+
+  /** Removes the message (and everything after); returns its text for prefill. */
+  const editMessage = useCallback(
+    (target: StoredMessage): string | null => {
+      if (!activeConversation || busy || abortRef.current) return null;
+      const idx = activeConversation.messages.findIndex((m) => m.id === target.id);
+      if (idx === -1) return null;
+      const kept = activeConversation.messages.slice(0, idx);
+      setMessages(kept);
+      persist({ ...activeConversation, messages: kept, updatedAt: Date.now() });
+      return target.content;
+    },
+    [activeConversation, busy, persist],
+  );
+
+  const select = useCallback((id: string) => {
+    if(busy||abortRef.current){setError("Stop the current reply before switching chats.");return;}
+    if (id === "") {
+      setActiveId(null);
+      setMessages([]);
+      return;
+    }
+    getAllConversations().then((all) => {
+      const conv = all.find((c) => c.id === id);
+      if (conv) {
+        setActiveId(conv.id);
+        setMessages(conv.messages);
+        setConversations(all);
+      }
+    });
+  }, [busy]);
+
+  const remove = useCallback(
+    (id: string) => {
+      if(busy||abortRef.current){setError("Stop the current reply before removing a chat.");return;}
+      dbDelete(id)
+        .then(() => setConversations((prev) => prev.filter((c) => c.id !== id)))
+        .then(() => {
+          if (id === activeId) {
+            setActiveId(null);
+            setMessages([]);
+          }
+        })
+        .catch(() => undefined);
+    },
+    [activeId,busy],
+  );
+
+  return {
+    conversations,
+    activeId,
+    messages,
+    busy,
+    streamingId,
+    error,
+    send,
+    stop,
+    regenerate,
+    editMessage,
+    select,
+    remove,
+  };
+}

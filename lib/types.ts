@@ -1,0 +1,9 @@
+export type Account = { id: string; email: string; phase: string; scanned: number; total: number; syncedAt: string | null; error: string | null };
+export type TaskStatus = "review" | "pending" | "waiting" | "done" | "dismissed" | "snoozed";
+export type Task = { id: string; title: string; status: TaskStatus; priority: string; due: string | null; category: string; notes: string; accountId: string | null; threadId: string | null; sourceId: string | null; evidence: string; taskUrl: string | null; reason: string; snoozedUntil: string | null; sourceChanged: number; createdAt: string; updatedAt: string };
+export type Mail = { id: string; accountId: string; gmailId: string; threadId: string; subject: string; sender: string; recipients: string; body: string; snippet: string; labels: string; receivedAt: string; attachments: string };
+export type FileKind = "document" | "slides" | "sheet";
+export type Slide = { title: string; body: string; notes: string; color: string };
+export type FileContent = { html?: string; slides?: Slide[]; cells?: Record<string, string>; rows?: number; cols?: number };
+export type WorkspaceFile = { id: string; kind: FileKind; title: string; content: string; taskId: string | null; mailId: string | null; revision: number; createdAt: string; updatedAt: string };
+export type Workspace = { accounts: Account[]; tasks: Task[]; files: WorkspaceFile[]; mailCount: number; configured: boolean; callbackUrl: string; userName: string };

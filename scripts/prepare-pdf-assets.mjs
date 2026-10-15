@@ -1,0 +1,12 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+const require=createRequire(import.meta.url);
+const root=path.dirname(require.resolve('pdfjs-dist/package.json'));
+const {version}=JSON.parse(await fs.readFile(path.join(root,'package.json'),'utf8'));
+const out=path.resolve('public/pdfjs',version);
+await fs.mkdir(out,{recursive:true});
+for(const dir of ['cmaps','standard_fonts','wasm','iccs'])await fs.cp(path.join(root,dir),path.join(out,dir),{recursive:true});
+await fs.copyFile(path.join(root,'build/pdf.worker.min.mjs'),path.join(out,'pdf.worker.min.mjs'));
+await fs.copyFile(path.join(root,'LICENSE'),path.join(out,'LICENSE'));
+console.log('Prepared same-origin PDF renderer assets for PDF.js '+version);

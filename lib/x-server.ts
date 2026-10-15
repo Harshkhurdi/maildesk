@@ -1,0 +1,4 @@
+import "server-only";
+import {HttpError,config} from "@/lib/server";
+export function xReady(){return !!(process.env.X_CLIENT_ID&&process.env.X_CLIENT_SECRET&&process.env.X_API_ENABLED==="true"&&config().key&&config().origin);}
+export async function xToken(data:Record<string,string>){const r=await fetch("https://api.x.com/2/oauth2/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded",Authorization:"Basic "+Buffer.from(`${process.env.X_CLIENT_ID}:${process.env.X_CLIENT_SECRET}`).toString("base64")},body:new URLSearchParams(data),signal:AbortSignal.timeout(15000)});if(!r.ok)throw new HttpError(502,"X could not renew your connection. Reconnect X and check developer access.");const p=await r.json();if(typeof p.access_token!=="string")throw new HttpError(502,"X returned an incomplete connection.");return {...p,expiresAt:Date.now()+Number(p.expires_in??7200)*1000};}

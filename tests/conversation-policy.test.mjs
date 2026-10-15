@@ -1,0 +1,7 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { roomRole,callRole,effectiveCallStatus } from '../lib/conversation-policy.ts';
+const room={ownerId:'owner',participantEmail:'guest@example.com',archivedAt:null};
+test('room access is confined to its owner and exact invited email',()=>{assert.equal(roomRole(room,{userId:'owner',email:'owner@example.com'}),'owner');assert.equal(roomRole(room,{userId:'guest',email:' GUEST@EXAMPLE.COM '}),'participant');assert.equal(roomRole(room,{userId:'outsider',email:'another@example.com'}),null);assert.equal(roomRole({...room,archivedAt:'now'},{userId:'guest',email:'guest@example.com'}),null);assert.equal(roomRole({...room,archivedAt:'now'},{userId:'owner',email:'owner@example.com'}),'owner');});
+test('call participation is tied to both person and device',()=>{const c={callerId:'owner',callerClientId:'tab1',calleeId:'guest',calleeClientId:'tab2'};assert.equal(callRole(c,'owner','tab1'),'caller');assert.equal(callRole(c,'guest','tab2'),'callee');assert.equal(callRole(c,'guest','tab1'),null);assert.equal(callRole(c,'owner','tab3'),null);});
+test('unanswered and abandoned calls expire',()=>{const t=Date.now();const c={status:'ringing',createdAt:new Date(t-46000).toISOString(),callerSeenAt:t,calleeSeenAt:t};assert.equal(effectiveCallStatus(c,t),'missed');assert.equal(effectiveCallStatus({...c,status:'active'},t),'active');assert.equal(effectiveCallStatus({...c,status:'active',calleeSeenAt:t-46000},t),'disconnected');assert.equal(effectiveCallStatus({...c,status:'ended'},t),'ended');});

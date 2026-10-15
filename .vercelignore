@@ -1,0 +1,12 @@
+.env*
+node_modules
+.next
+.work
+tests
+README.md
+.agents
+.work
+public/pdfjs
+CLAUDE.md
+AGENTS.md
+.sites-runtime

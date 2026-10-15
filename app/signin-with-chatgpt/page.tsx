@@ -1,0 +1,1 @@
+import {redirect} from "next/navigation";import {safeReturnPath} from "@/app/chatgpt-auth";export default async function Page({searchParams}:{searchParams:Promise<{return_to?:string}>}){const p=await searchParams;redirect("/auth/sign-in?return_to="+encodeURIComponent(safeReturnPath(p.return_to??"/")));}

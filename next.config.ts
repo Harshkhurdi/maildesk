@@ -1,0 +1,3 @@
+import type { NextConfig } from "next";
+const config:NextConfig={reactStrictMode:true,outputFileTracingRoot:process.cwd(),webpack(config,{isServer,webpack}){if(!isServer)config.plugins.push(new webpack.NormalModuleReplacementPlugin(/^node:(fs|https)$/,process.cwd()+"/lib/browser-node-stub.ts"));return config;},serverExternalPackages:["pg"],poweredByHeader:false,async headers(){return [{source:"/(.*)",headers:[{key:"X-Content-Type-Options",value:"nosniff"},{key:"Referrer-Policy",value:"strict-origin-when-cross-origin"},{key:"X-Frame-Options",value:"DENY"}]},{source:"/code",headers:[{key:"Content-Security-Policy",value:"frame-src 'self' blob: data:; object-src 'none'"}]}];}};
+export default config;
