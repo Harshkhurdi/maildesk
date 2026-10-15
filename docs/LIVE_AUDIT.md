@@ -23,7 +23,7 @@ The app now gives an actionable origin-error explanation and clearer expired-cod
 | Spreadsheets | Entered 10 and 20; SUM produced 30; saved workbook |
 | Excel export | Actual XLSX reopened with formula SUM(A1:A2) and cached result 30 |
 | PDF reader | Opened a local synthetic two-page PDF; page navigation, extracted text, cross-page search, 125% zoom, and 90-degree rotation verified |
-| Free AI | A real free-router prompt returned the requested text; no email content was sent |
+| Free AI | A real free-router prompt returned the requested text; the synthetic conversation reopened from browser history and exported to JSON; no email content was sent |
 | Code editor | Saved a project, edited HTML, rendered it in the isolated preview, reopened its saved version, and downloaded a project backup |
 | Shopping | Official store search links generated; a saved synthetic quote correctly totaled ₹100 × 2 + ₹15 = ₹215 |
 | Web search | Saved a private search bookmark and opened actual Google results in a new tab |
@@ -59,6 +59,6 @@ The historical migration API assertions used an isolated fixture harness. They m
 
 ## Cleanup and deployment
 
-Removed the exact QA tasks (3), office files (3), code project (1), bookmark (1), synthetic shopping row (1), and approved test room (1), including its messages (3), ended calls (2), and signaling records (30). Cleanup used unique labels plus captured IDs and guarded predicates. The test accounts remain valid authenticated users; removing the room leaves the guest with no invited rooms. No real mail, account tokens, or unrelated user records were deleted.
+Removed the exact QA tasks (3), office files (3), code project (1), bookmark (1), synthetic shopping row (1), and approved test room (1), including its messages (3), ended calls (2), and signaling records (30). Cleanup used unique labels plus captured IDs and guarded predicates. The test accounts remain valid authenticated users; removing the room leaves the guest with no invited rooms. No real mail, account tokens, or unrelated user records were deleted. The synthetic AI conversation remains in browser-local history, with a downloaded JSON export.
 
 The code fixes were published to the connected GitHub repository and verified on the stable Vercel URL. Release identifiers and final access checks are recorded in the separate `Maildesk_Release_Verification.json` output.
