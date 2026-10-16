@@ -59,12 +59,13 @@ test('guest tool saves use local storage, preserve revisions and never call fetc
  await api('/api/utilities','DELETE',{id:item.id});assert.equal((await api('/api/utilities?kind=code')).items.length,0);
  }finally{globalThis.fetch=original;}
 });
-test('guest shopping and bookmarks use the same content and merchant validation',async()=>{
+test('guest bookmarks stay active while removed shopping data remains safe in backups',async()=>{
  const storage=memory(),api=guest.createGuestUtilityApi(storage);
- await api('/api/utilities','POST',{kind:'shopping',title:'Shopping',content:JSON.stringify({address:'Synthetic test address',pincode:'110001',quotes:[]})});
  await api('/api/utilities','POST',{kind:'web',title:'Example',content:'{"url":"https://example.com/"}'});
- const before=storage.getItem(guest.GUEST_STORAGE_KEY);await assert.rejects(api('/api/utilities','POST',{kind:'web',title:'Unsafe',content:'{"url":"javascript:alert(1)"}'}));assert.equal(storage.getItem(guest.GUEST_STORAGE_KEY),before);
- assert.equal((await api('/api/utilities?kind=shopping')).items.length,1);assert.equal((await api('/api/utilities?kind=web')).items.length,1);
+ const data=guest.readGuestData(storage);data.utilities.push({id:'legacy-shopping',kind:'shopping',title:'Saved shopping',content:JSON.stringify({address:'Synthetic test address',pincode:'110001',quotes:[]}),revision:1,updatedAt:timestamp});guest.writeGuestData(storage,data);
+ const before=storage.getItem(guest.GUEST_STORAGE_KEY);await assert.rejects(api('/api/utilities?kind=shopping'),/removed/);await assert.rejects(api('/api/utilities','POST',{kind:'shopping',title:'Shopping',content:'{}'}),/removed/);
+ await assert.rejects(api('/api/utilities','POST',{kind:'web',title:'Unsafe',content:'{"url":"javascript:alert(1)"}'}));assert.equal(storage.getItem(guest.GUEST_STORAGE_KEY),before);
+ const destination=memory();guest.restoreGuestBackup(destination,guest.prepareGuestRestore(destination,before));assert.equal(guest.readGuestData(destination).utilities.find(i=>i.kind==='shopping').id,'legacy-shopping');assert.equal((await api('/api/utilities?kind=web')).items.length,1);
 });
 test('guest backups retain only guest records and discard injected account metadata',()=>{
  const storage=memory();storage.setItem(guest.GUEST_STORAGE_KEY,JSON.stringify({...guest.emptyGuestData(),accounts:[{token:'private-token'}],userName:'Owner',configured:true}));
@@ -107,4 +108,12 @@ test('guest restore detects changes after review and handles quota failure witho
  assert.throws(()=>guest.restoreGuestBackup(storage,plan),/another tab/);assert.equal(storage.getItem(guest.GUEST_STORAGE_KEY),before);
  const blocked={getItem:storage.getItem,setItem(){throw Error('quota');}};
  assert.throws(()=>guest.restoreGuestBackup(blocked,guest.prepareGuestRestore(blocked,raw)),/full or blocked/);assert.equal(storage.getItem(guest.GUEST_STORAGE_KEY),before);
+});
+test('manual mail refresh makes one request per account even when a legacy response says incomplete',async()=>{
+ const workspace={accounts:[{id:'a',email:'a@example.com'},{id:'b',email:'b@example.com'}],tasks:[],files:[],mailCount:0,configured:true,callbackUrl:'',userName:'Owner'};
+ const requests=[];let stateIndex=0;
+ const module=await isolated('../components/maildesk-workspace.tsx',{...Object.fromEntries(Object.entries(icons).filter(([key])=>key!=="default"&&/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key))),React,dynamic:()=>()=>null,useState:value=>[stateIndex++===0?workspace:typeof value==='function'?value():value,()=>{}],useRef:value=>({current:value}),useCallback:fn=>fn,useEffect:()=>{},fetch:async(path,options)=>{requests.push({path,body:options.body?JSON.parse(options.body):undefined});return Response.json(path==='/api/workspace'?workspace:{done:false,processed:25});},...guest,cleanHtml:value=>value});
+ const tree=module.default();function find(element){if(!element||typeof element!=='object')return;const children=[element.props?.children].flat(Infinity);if(element.type==='button'&&children.includes('Refresh mail'))return element;for(const child of children){const result=find(child);if(result)return result;}}
+ const refresh=find(tree);assert(refresh);refresh.props.onClick();await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(requests.filter(r=>r.path==='/api/gmail/sync').map(r=>r.body.accountId),['a','b']);assert.equal(requests.filter(r=>r.path==='/api/workspace').length,2);
 });

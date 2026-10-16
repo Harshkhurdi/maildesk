@@ -81,15 +81,16 @@ export function removeGuestFile(storage:BrowserStorage,id:string):Workspace{
 export function createGuestUtilityApi(storage:BrowserStorage){return async function(path:string,method="GET",payload?:unknown){
   const url=new URL(path,"https://guest.local");if(url.origin!=="https://guest.local"||url.pathname!=="/api/utilities")throw Error("Sign in to use this connected feature.");
   const data=readGuestData(storage);
-  if(method==="GET"){const kind=url.searchParams.get("kind");if(!["code","shopping","web"].includes(kind??""))throw Error("Choose a workspace tool.");return {items:data.utilities.filter(i=>i.kind===kind).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt))};}
+  if(method==="GET"){const kind=url.searchParams.get("kind");if(kind==="shopping")throw Error("Shopping has been removed from Maildesk.");if(!["code","shopping","web"].includes(kind??""))throw Error("Choose a workspace tool.");return {items:data.utilities.filter(i=>i.kind===kind).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt))};}
   const p=payload as {id?:string;revision?:number;kind?:string;title?:string;content?:string};
   if(!p||typeof p!=="object")throw Error("Check the saved item.");
   if(method==="DELETE"){if(typeof p.id!=="string"||!data.utilities.some(i=>i.id===p.id))throw Error("Item not found.");data.utilities=data.utilities.filter(i=>i.id!==p.id);writeGuestData(storage,data);return {deleted:true};}
-  if(method!=="POST"||!["code","shopping","web"].includes(p.kind??"")||typeof p.title!=="string"||typeof p.content!=="string")throw Error("Check the name and content.");
-  const content=validateUtility(p.kind!,p.content);if(content===null)throw Error("Check the project files, website link, or shopping details.");
+  if(p.kind==="shopping")throw Error("Shopping has been removed from Maildesk.");
+  if(method!=="POST"||!["code","web"].includes(p.kind??"")||typeof p.title!=="string"||typeof p.content!=="string")throw Error("Check the name and content.");
+  const content=validateUtility(p.kind!,p.content);if(content===null)throw Error("Check the project files or website link.");
   const existing=data.utilities.find(i=>i.id===p.id);
   if(p.id&&(!existing||existing.kind!==p.kind||existing.revision!==p.revision))throw Error("This guest item changed in another tab. Download your changes and reopen the saved version.");
-  const item={id:existing?.id??crypto.randomUUID(),kind:p.kind as "code"|"shopping"|"web",title:p.title.trim(),content,revision:(existing?.revision??0)+1,updatedAt:new Date().toISOString()};
+  const item={id:existing?.id??crypto.randomUUID(),kind:p.kind as "code"|"web",title:p.title.trim(),content,revision:(existing?.revision??0)+1,updatedAt:new Date().toISOString()};
   data.utilities=[item,...data.utilities.filter(i=>i.id!==item.id)];writeGuestData(storage,data);return {item};
 };}
 export async function guestUtilityApi(path:string,method="GET",payload?:unknown){return createGuestUtilityApi(window.localStorage)(path,method,payload);}

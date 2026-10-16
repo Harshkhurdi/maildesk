@@ -1,9 +1,8 @@
 import {OPENROUTER_BASE_URL} from './env';
-import {freeChatModel,freeImageModel} from './free-policy';
+import {freeChatModel} from './free-policy';
 import type {OpenRouterModel,FreeModel} from './openrouter/types';
 let cache:{at:number;models:OpenRouterModel[]}|null=null;
 let inflight:Promise<OpenRouterModel[]>|null=null;
 export async function catalog(fresh=false):Promise<OpenRouterModel[]>{if(!fresh&&cache&&Date.now()-cache.at<60000)return cache.models;if(!fresh&&inflight)return inflight;const load=async()=>{const res=await fetch(`${OPENROUTER_BASE_URL}/models`,{signal:AbortSignal.timeout(20000),headers:{Accept:'application/json'}});if(!res.ok)throw Error('The free model catalog is temporarily unavailable. Try again.');const data=await res.json() as {data?:OpenRouterModel[]};if(!Array.isArray(data.data))throw Error('The model catalog returned an invalid response.');cache={at:Date.now(),models:data.data};return cache.models;};if(fresh)return load();inflight=load().finally(()=>inflight=null);return inflight;}
 export function normalize(model:OpenRouterModel):FreeModel{return {id:model.id,name:model.name.replace(/\s*\(free\)\s*$/i,''),description:model.description,contextLength:model.context_length??0,vision:model.architecture?.input_modalities?.includes('image')??false,reasoning:model.supported_parameters?.some(p=>['reasoning','include_reasoning'].includes(p))??false,tools:model.supported_parameters?.includes('tools')??false};}
 export async function chatModels(){return (await catalog()).filter(freeChatModel).map(normalize).sort((a,b)=>Number(b.id==='openrouter/free')-Number(a.id==='openrouter/free')||b.contextLength-a.contextLength||a.name.localeCompare(b.name));}
-export async function imageModels(){return (await catalog()).filter(freeImageModel).map(m=>({id:m.id,name:m.name}));}

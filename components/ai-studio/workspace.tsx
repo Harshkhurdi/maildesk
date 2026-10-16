@@ -7,7 +7,6 @@ import { Composer, type ComposerHandle } from "@/components/ai-studio/Composer";
 import { EmptyState } from "@/components/ai-studio/EmptyState";
 import { MessageList } from "@/components/ai-studio/MessageList";
 import { useChat } from "@/hooks/ai-studio/useChat";
-import { ImagesView } from "@/components/ai-studio/ImagesView";
 import { SettingsBar } from "@/components/ai-studio/SettingsBar";
 import {
   type ChatSettings,
@@ -16,13 +15,10 @@ import {
 import type { FreeModel } from "@/lib/ai-studio/openrouter/types";
 import { MAX_CHAT_IMPORT_BYTES } from "@/lib/ai-studio/storage/import";
 
-type View = "chat" | "images";
-
 export default function HomePage() {
   const shellRef = useRef<HTMLDivElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
-  const [view, setView] = useState<View>("chat");
   const [models, setModels] = useState<FreeModel[]>([]);
   const [configured,setConfigured]=useState(false);
   const [modelsLoading,setModelsLoading]=useState(true);
@@ -199,7 +195,7 @@ export default function HomePage() {
             </svg>
           </button>
           <ModelPicker models={models} selectedId={selectedId} onSelect={setSelectedId} />
-          {view === "chat" && <>
+          {<>
             <button disabled={chat.busy || importing} onClick={() => importInput.current?.click()} title="Import an AI Studio JSON export as a new local chat" className="rounded-lg px-2 py-1.5 text-xs font-medium text-ink-secondary transition-colors hover:bg-hover hover:text-ink disabled:opacity-40">{importing ? "Importing…" : "↑ Import JSON"}</button>
             <input ref={importInput} type="file" accept=".json,application/json" aria-label="Import AI chat JSON" hidden onChange={async event => {
               const file = event.target.files?.[0]; event.target.value = "";
@@ -214,21 +210,6 @@ export default function HomePage() {
             }} />
           </>}
 
-          {/* View switch */}
-          <div className="ml-2 flex rounded-full border border-edge p-0.5 text-xs">
-            {(["chat", "images"] as View[]).map((v) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`rounded-full px-3 py-1 capitalize transition-colors ${
-                  view === v ? "bg-accent text-white" : "text-ink-secondary hover:text-ink"
-                }`}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-
           {modelsError && (
             <span className="ml-auto hidden truncate text-xs text-red-500 sm:block" title={modelsError}>
               ⚠ {modelsError}
@@ -236,7 +217,7 @@ export default function HomePage() {
           )}
 
           {/* Export current conversation */}
-          {view === "chat" && chat.messages.length > 0 && (
+          {chat.messages.length > 0 && (
             <div className="ml-auto flex items-center gap-1">
               <button
                 onClick={() => exportChat("md")}
@@ -259,10 +240,7 @@ export default function HomePage() {
 
         {!modelsLoading&&!configured&&<div className="ai-studio-setup" role="status">AI setup is incomplete. Add the OpenRouter key in the site’s server settings to enable messages.</div>}
         {modelsError&&<p className="ai-studio-setup" role="alert">{modelsError} <button onClick={()=>location.reload()}>Try again</button></p>}
-        {view === "images" ? (
-          <ImagesView />
-        ) : (
-          <>
+        <>
         <div
           ref={scrollRef}
           onScroll={() => {
@@ -318,8 +296,7 @@ export default function HomePage() {
                 onStop={chat.stop}
               />
             </div>
-          </>
-        )}
+        </>
       </main>
     </div></div>
   );
