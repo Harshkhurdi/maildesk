@@ -27,4 +27,4 @@
 .mobile-menu{display:none}@media(max-width:700px){.mobile-menu{display:inline-flex}}
 
 /* Keep whitespace in opened text and separate document table columns. */
-.document-paper{white-space:pre-wrap}.document-paper table{border-collapse:collapse;max-width:100%}.document-paper td,.document-paper th{border:1px solid var(--line);padding:8px 12px;min-width:50px}.office-import-note{font-size:12px;line-height:1.8;margin:14px 0;color:var(--muted)}
+.document-paper,.comms-document{white-space:pre-wrap}.document-paper table,.comms-document table{border-collapse:collapse;max-width:100%}.document-paper td,.document-paper th,.comms-document td,.comms-document th{border:1px solid var(--line);padding:8px 12px;min-width:50px}.office-import-note{font-size:12px;line-height:1.8;margin:14px 0;color:var(--muted)}

@@ -81,3 +81,5 @@ Fixed a chat cursor race: a locally sent message no longer advances the incoming
 Fixed document word-count layout so its number and label stay together. HTML email previews preserve cell separators, semantic block breaks and numeric encoded spaces; document HTML imports preserve semantic block boundaries. The existing cream/green design remains.
 
 All 187 deterministic tests, typecheck and production build pass locally. Production dependencies have zero reported advisories at this check. Live deployment verification is recorded separately after publication, rather than inferred from these checks.
+
+Live visual inspection also caught adjacent cells touching in the shared-document preview. The document table padding and borders now apply there too, preserving both inline spaces and clear cell boundaries.
