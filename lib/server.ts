@@ -1,4 +1,4 @@
-import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { getRouteChatGPTUser } from "@/lib/route-session";
 import { getDb } from "@/db";
 import { parseJsonObject } from "@/lib/request-json";
 import { SessionUnavailableError } from "@/lib/session-reader";
@@ -12,7 +12,7 @@ export class HttpError extends Error { status:number; constructor(status:number,
 export function json(data:unknown,status=200){return Response.json(data,{status,headers:{"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"}});}
 export function isWorkspaceOwner(user:{userId:string;email:string}){const owner=config().ownerEmail;return owner?user.email.trim().toLowerCase()===owner.trim().toLowerCase():process.env.NODE_ENV==="development"&&process.env.MAILDESK_DEV_AUTH==="true"&&user.userId==="local_seedy";}
 export async function guard(request?:Request,shared=false) {
-  const user=await getChatGPTUser();if(!user)throw new HttpError(401,"Sign in to your private workspace.");
+  const user=await getRouteChatGPTUser(request);if(!user)throw new HttpError(401,"Sign in to your private workspace.");
   if(!shared&&!isWorkspaceOwner(user))throw new HttpError(403,"Your access is limited to your invited conversations. The personal workspace is private.");
   if(request && !["GET","HEAD"].includes(request.method)){
     const origin=request.headers.get("origin");

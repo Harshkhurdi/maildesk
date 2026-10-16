@@ -83,3 +83,11 @@ Fixed document word-count layout so its number and label stay together. HTML ema
 All 187 deterministic tests, typecheck and production build pass locally. Production dependencies have zero reported advisories at this check. Live deployment verification is recorded separately after publication, rather than inferred from these checks.
 
 Live visual inspection also caught adjacent cells touching in the shared-document preview. The document table padding and borders now apply there too, preserving both inline spaces and clear cell boundaries.
+
+## Long-running conversation session renewal — 16 October 2026
+
+The real two-account chat, outgoing/incoming voice, video, media controls, decline and hang-up tests passed. A recurring temporary sign-in warning also appeared during long-running idle polling; the user reported a Wi-Fi interruption. Independent SDK review found that the server getSession path can keep hitting the upstream provider after its signed cache expires when the upstream does not rotate the session token.
+
+Route guards now use the SDK's public session handler, which verifies the existing session and renews its signed cache. Only validated, verified-email identities and SDK-issued cookies are accepted. The existing 60-second lifetime, page authentication, owner/room/origin checks and private no-store responses remain. Missing/rejected sessions return401; unavailable or malformed provider responses return503. No unsigned, stale or custom identity fallback was introduced. Conversation polling backs off to a maximum15seconds during failures and returns to1.1seconds after recovery.
+
+Astra reviewed the design and the GPT6.1 worker implemented the route adapter and real-SDK isolated fixtures. The full196-test suite, typecheck and production build pass. Fixtures verify SDK cache renewal and subsequent zero-upstream-read reuse, cookie security flags and lifetime, missing/tampered/rejected sessions, unavailable providers, invalid identity data, write failures and unchanged authorization. Live post-deployment renewal observation is recorded in the release evidence.
