@@ -267,3 +267,10 @@ test('sync route acquires an expired lease for one refresh with a 240-second bou
 test('failed sync releases into cooldown while preserving saved checkpoints and cannot release a replacement lease',async()=>{
   for(const replaceOnFailure of [false,true]){const fixture=await syncRouteFixture({syncError:new HttpError(502,'Provider interrupted'),replaceOnFailure}),start=Date.now(),response=await fixture.run();assert.equal(response.status,502);assert.equal(fixture.state.phase,'full');assert.equal(fixture.state.pageToken,'saved-page');assert.equal(fixture.state.historyId,'saved-history');assert.equal(fixture.state.queue,'["saved"]');if(replaceOnFailure)assert.equal(fixture.state.leaseId,'replacement');else{assert.equal(fixture.state.leaseId,null);assert(fixture.state.leaseUntil>=start+60000);assert.equal(fixture.state.error,'Provider interrupted');assert.equal((await fixture.run()).status,429);assert.equal(fixture.calls(),1);}}
 });
+
+test('HTML email previews keep table cells, semantic blocks and encoded spaces separate',async()=>{
+  const gmail=await tokenModule(async()=>Response.json({}));
+  const text=gmail.htmlToText('<table><tr><td>Invoice</td><td>Amount</td></tr><tr><td>Hello&#32;world</td><td>₹&#x20;30</td></tr></table><section>Next step</section><section>Another step</section>');
+  assert.match(text,/Invoice\tAmount/);assert.match(text,/Hello world/);assert.match(text,/₹ 30/);assert.match(text,/Next step\n+Another step/);
+  assert.equal(gmail.htmlToText('Hello <b>world</b> with spaces'),'Hello world with spaces');
+});

@@ -66,11 +66,16 @@ export class CallEngine {
       return current();
     }
     if(signal.description.type==="offer"&&this.side!=="callee")return true;if(signal.description.type==="answer"&&this.side!=="caller")return true;
-    await pc.setRemoteDescription(signal.description);if(!current())return false;
+    // A saved signal is retried when posting the answer fails. Applying the
+    // same offer/answer again after negotiation can be invalid in WebRTC.
+    const alreadyApplied=pc.remoteDescription?.type===signal.description.type&&pc.remoteDescription?.sdp===signal.description.sdp;
+    if(!alreadyApplied)await pc.setRemoteDescription(signal.description);if(!current())return false;
     for(const candidate of this.pending){await pc.addIceCandidate(candidate);if(!current())return false;}this.pending=[];
     if(signal.description.type==="offer"){
-      const answer=await pc.createAnswer();if(!current())return false;
-      await pc.setLocalDescription(answer);if(!current())return false;
+      if(!alreadyApplied||pc.localDescription?.type!=="answer"){
+        const answer=await pc.createAnswer();if(!current())return false;
+        await pc.setLocalDescription(answer);if(!current())return false;
+      }
       await this.send({type:"description",description:{type:"answer",sdp:pc.localDescription!.sdp}});
     }
     return current();

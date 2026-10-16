@@ -71,3 +71,13 @@ Mail reads and searches enforce the 25-per-account window even for older caches 
 X and Shopping navigation, pages, components and external API implementations are removed. Shopping has no verified free live price/order integration across the requested merchants; store search remains possible through Web search. Existing stored legacy records are retained rather than erased. AI image generation is also removed after the current provider catalog returned zero verified free image models; free chat/attachments/history remain. Cloudflare setup is skipped as requested and direct call/chat behavior is unchanged. Historical audits above describe earlier releases, not current available features.
 
 The simplified release passes 175 deterministic tests, the production build and the standalone TypeScript check. Regression coverage includes the capped provider request count, failures preserving cache, ownership/lease races, cooldown, old task/file references, bounded API search, legacy cache counts, manual non-looping refresh, and preservation of retired shopping records in guest backups. Actual Gmail access still requires the owner to complete Google consent.
+
+## Retained tools and Office opening follow-up — 16 October 2026
+
+Added Open file to document, presentation and spreadsheet libraries, including guest mode. Modern DOCX/PPTX/XLSX plus CSV/TXT/HTML open as bounded editable copies after a visible import notice. Files are parsed locally; exact Office layout/media limitations are documented in OFFICE_FILES.md. ZIP directory and actual streamed expansion are bounded before Office parsing.
+
+Fixed a chat cursor race: a locally sent message no longer advances the incoming poll cursor past an unseen peer message. WebRTC offer/answer replay now recognizes an already-applied description, so a failed answer post can retry without applying SDP a second time. Real two-person media quality remains awaiting the user's test. The unchanged relay limitation is visible in the call UI.
+
+Fixed document word-count layout so its number and label stay together. HTML email previews preserve cell separators, semantic block breaks and numeric encoded spaces; document HTML imports preserve semantic block boundaries. The existing cream/green design remains.
+
+All 187 deterministic tests, typecheck and production build pass locally. Production dependencies have zero reported advisories at this check. Live deployment verification is recorded separately after publication, rather than inferred from these checks.

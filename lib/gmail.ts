@@ -31,7 +31,8 @@ export async function accessToken(account:AccountRow,signal?:AbortSignal){
   if(typeof token?.access_token!=="string"||!token.access_token)throw new GmailError(502,"Google did not return an access token. Try again later.");return token.access_token;
 }
 export function decodePart(value:string){try{return new TextDecoder().decode(unbase64(value));}catch{return "";}}
-export function htmlToText(html:string){return html.replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,(_match,href,label)=>{const link=safeUrl(href.replace(/&amp;/g,"&"));return label+(link?" ("+link+")":"");}).replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi,"").replace(/<br\s*\/?\s*>|<\/(?:p|div|li|tr|h[1-6])>/gi,"\n").replace(/<[^>]*>/g,"").replace(/&nbsp;/g," ").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&amp;/g,"&").replace(/\n{3,}/g,"\n\n");}
+export function htmlToText(html:string){return html.replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,(_match,href,label)=>{const link=safeUrl(href.replace(/&amp;/g,"&"));return label+(link?" ("+link+")":"");}).replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi,"").replace(/<!--[\s\S]*?-->/g,"").replace(/<\/(?:td|th)\s*>/gi,"\t").replace(/<br\s*\/?\s*>|<\/?(?:p|div|li|tr|h[1-6]|section|article|header|footer|main|aside|blockquote|ul|ol|table|address|figure|figcaption)\b[^>]*>/gi,"\n").replace(/<[^>]*>/g,"").replace(/&nbsp;/gi," ").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&#(x[0-9a-f]+|[0-9]+);/gi,(match,digits)=>{const point=digits[0].toLowerCase()==="x"?parseInt(digits.slice(1),16):Number(digits);return point>0&&point<=0x10ffff&&!(point>=0xd800&&point<=0xdfff)?String.fromCodePoint(point):match;}).replace(/&amp;/g,"&").replace(/\n{3,}/g,"\n\n");}
+
 function messageBody(part?:GmailPart):string {
   if(!part)return "";
   const plain:string[]=[],html:string[]=[];

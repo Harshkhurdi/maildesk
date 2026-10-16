@@ -93,3 +93,15 @@ test('pending ICE is bounded and stop releases it',()=>harness(async({engine,cal
   await assert.rejects(engine.receive(ice,call.id),/Too many pending/);
   engine.stop();assert.equal(await engine.receive(ice,call.id),false);
 }));
+
+test('retrying an offer after a failed answer post reuses negotiation instead of applying SDP twice',()=>harness(async({engine,options,call,requests})=>{
+  await engine.attach(call);const pc=engine.pc;let sends=0;
+  const original=options.request;options.request=async(...args)=>{if(args[2]?.signal?.description?.type==='answer'&&++sends===1)throw Error('temporary answer failure');return original(...args);};
+  await assert.rejects(engine.receive(offer,call.id),/temporary answer failure/);
+  assert.equal(await engine.receive(offer,call.id),true);assert.equal(pc.descriptions.length,1);assert.equal(sends,2);assert.equal(pc.localDescription.type,'answer');
+}));
+test('a repeated answer is acknowledged without renegotiating a stable peer',()=>harness(async({engine,call})=>{
+  await engine.attach({...call,callerId:'callee',callerClientId:'device-callee',calleeId:'caller',calleeClientId:'device-caller'});
+  const answer={type:'description',description:{type:'answer',sdp:'same-answer'}};
+  assert.equal(await engine.receive(answer,call.id),true);assert.equal(await engine.receive(answer,call.id),true);assert.deepEqual(engine.pc.descriptions,[answer.description]);
+}));

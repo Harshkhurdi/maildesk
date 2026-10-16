@@ -1,4 +1,6 @@
+import {readOfficeArchive} from "./office-archive.ts";
 export async function readXlsx(bytes: ArrayBuffer) {
+  await readOfficeArchive(bytes);
   const {default: ExcelJS} = await import("exceljs");
   const book = new ExcelJS.Workbook();
   await book.xlsx.load(bytes);
