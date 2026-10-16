@@ -14,6 +14,7 @@ import {
   DEFAULT_SETTINGS,
 } from "@/lib/ai-studio/chat/settings";
 import type { FreeModel } from "@/lib/ai-studio/openrouter/types";
+import { MAX_CHAT_IMPORT_BYTES } from "@/lib/ai-studio/storage/import";
 
 type View = "chat" | "images";
 
@@ -28,6 +29,9 @@ export default function HomePage() {
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [settings, setSettings] = useState<ChatSettings>(DEFAULT_SETTINGS);
+  const [importStatus, setImportStatus] = useState("");
+  const [importing, setImporting] = useState(false);
+  const importInput = useRef<HTMLInputElement>(null);
 
   const chat = useChat(selectedId, settings);
   const composerRef = useRef<ComposerHandle>(null);
@@ -126,7 +130,7 @@ export default function HomePage() {
       let mime: string;
       if (format === "json") {
         content = JSON.stringify(
-          { title, model: selectedId, exportedAt: new Date().toISOString(), messages: chat.messages },
+          { title, model: chat.conversations.find(c => c.id === chat.activeId)?.modelId ?? selectedId, exportedAt: new Date().toISOString(), messages: chat.messages },
           null,
           2,
         );
@@ -195,6 +199,20 @@ export default function HomePage() {
             </svg>
           </button>
           <ModelPicker models={models} selectedId={selectedId} onSelect={setSelectedId} />
+          {view === "chat" && <>
+            <button disabled={chat.busy || importing} onClick={() => importInput.current?.click()} title="Import an AI Studio JSON export as a new local chat" className="rounded-lg px-2 py-1.5 text-xs font-medium text-ink-secondary transition-colors hover:bg-hover hover:text-ink disabled:opacity-40">{importing ? "Importing…" : "↑ Import JSON"}</button>
+            <input ref={importInput} type="file" accept=".json,application/json" aria-label="Import AI chat JSON" hidden onChange={async event => {
+              const file = event.target.files?.[0]; event.target.value = "";
+              if (!file) return;
+              setImporting(true); setImportStatus("");
+              try {
+                if (file.size > MAX_CHAT_IMPORT_BYTES) throw Error("Choose an AI Studio JSON export smaller than 10 MB.");
+                await chat.importChat(await file.text());
+                setImportStatus("Chat imported as a new copy in this browser. Nothing was sent to an AI provider.");
+              } catch (error) { setImportStatus(error instanceof Error ? error.message : "Chat import failed. Your existing chats were kept."); }
+              finally { setImporting(false); }
+            }} />
+          </>}
 
           {/* View switch */}
           <div className="ml-2 flex rounded-full border border-edge p-0.5 text-xs">
@@ -237,6 +255,7 @@ export default function HomePage() {
             </div>
           )}
         </header>
+        {importStatus && <p className="mx-auto w-full max-w-3xl px-6 pb-1 text-xs text-ink-secondary" role="status">{importStatus}</p>}
 
         {!modelsLoading&&!configured&&<div className="ai-studio-setup" role="status">AI setup is incomplete. Add the OpenRouter key in the site’s server settings to enable messages.</div>}
         {modelsError&&<p className="ai-studio-setup" role="alert">{modelsError} <button onClick={()=>location.reload()}>Try again</button></p>}

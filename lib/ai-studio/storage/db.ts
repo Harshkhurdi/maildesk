@@ -57,14 +57,25 @@ function openDb(): Promise<IDBDatabase> {
 async function withStore<T>(
   mode: IDBTransactionMode,
   fn: (store: IDBObjectStore) => IDBRequest<T>,
+  name = STORE,
 ): Promise<T> {
   const db = await openDb();
   return new Promise<T>((resolve, reject) => {
-    const tx = db.transaction(STORE, mode);
-    const req = fn(tx.objectStore(STORE));
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error ?? new Error("IndexedDB request failed"));
-    tx.oncomplete = () => db.close();
+    let tx: IDBTransaction;
+    let req: IDBRequest<T>;
+    try {
+      tx = db.transaction(name, mode);
+      req = fn(tx.objectStore(name));
+      tx.oncomplete = () => { db.close(); resolve(req.result); };
+      tx.onabort = () => { db.close(); reject(tx.error ?? new Error("Browser storage transaction was aborted.")); };
+      tx.onerror = () => { db.close(); reject(tx.error ?? new Error("Browser storage transaction failed.")); };
+      // A request succeeding is not a committed save: quota/abort errors can
+      // still follow. Only transaction completion resolves this operation.
+      req.onerror = () => reject(req.error ?? new Error("IndexedDB request failed"));
+    } catch (error) {
+      db.close();
+      reject(error);
+    }
   });
 }
 
@@ -101,27 +112,10 @@ export interface Generation {
 }
 
 export async function saveGeneration(gen: Generation): Promise<void> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(GEN_STORE, "readwrite");
-    tx.objectStore(GEN_STORE).put(gen);
-    tx.oncomplete = () => {
-      db.close();
-      resolve();
-    };
-    tx.onerror = () => reject(tx.error ?? new Error("Failed to save generation"));
-  });
+  await withStore("readwrite", s => s.put(gen), GEN_STORE);
 }
 
 export async function getAllGenerations(): Promise<Generation[]> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(GEN_STORE, "readonly");
-    const req = tx.objectStore(GEN_STORE).getAll() as IDBRequest<Generation[]>;
-    req.onsuccess = () => {
-      db.close();
-      resolve((req.result ?? []).sort((a, b) => b.createdAt - a.createdAt));
-    };
-    req.onerror = () => reject(req.error ?? new Error("Failed to load generations"));
-  });
+  const all = await withStore<Generation[]>("readonly", s => s.getAll(), GEN_STORE);
+  return all.sort((a, b) => b.createdAt - a.createdAt);
 }

@@ -33,7 +33,7 @@ export function ImagesView() {
   const [gallery, setGallery] = useState<Generation[]>([]);
 
   useEffect(() => {
-    getAllGenerations().then(setGallery).catch(() => undefined);
+    getAllGenerations().then(setGallery).catch(err => setError(`Saved images could not be loaded: ${String(err)}`));
   }, []);
 
   const refreshModels = useCallback(() => {

@@ -75,3 +75,36 @@ test('mounting guest mode does not fetch the signed-in workspace even when a ses
  const module=await isolated('../components/maildesk-workspace.tsx',{...Object.fromEntries(Object.entries(icons).filter(([key])=>key!=="default"&&/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key))),React,dynamic:()=>()=>null,useState:value=>[typeof value==='function'?value():value,next=>{if(next?.userName==='Guest')loaded=next;}],useRef:value=>({current:value}),useCallback:fn=>fn,useEffect:fn=>effects.push(fn),window:{localStorage:storage,addEventListener(){},removeEventListener(){}},location:{search:'',pathname:'/guest'},history:{replaceState(){}},fetch:()=>{requests++;throw Error('Private request forbidden');},...guest,cleanHtml:value=>value});
  module.default({guest:true});for(const effect of effects)effect();await Promise.resolve();await Promise.resolve();assert.equal(requests,0);assert.equal(loaded.userName,'Guest');assert.deepEqual(loaded.tasks,[]);
 });
+test('guest backup restore adds records, preserves existing work and skips identical records',async()=>{
+ const source=memory();guest.saveGuestTask(source,task);guest.saveGuestFile(source,file);
+ await guest.createGuestUtilityApi(source)('/api/utilities','POST',{kind:'web',title:'Example',content:'{"url":"https://example.com/"}'});
+ const destination=memory();guest.saveGuestTask(destination,{...task,id:'other',title:'Keep my work'});
+ const plan=guest.prepareGuestRestore(destination,source.getItem(guest.GUEST_STORAGE_KEY));
+ assert.deepEqual(plan.counts,{tasks:1,files:1,utilities:1,skipped:0});assert.equal(guest.readGuestData(destination).tasks.length,1);
+ guest.restoreGuestBackup(destination,plan);const restored=guest.readGuestData(destination);
+ assert.equal(restored.tasks.length,2);assert.equal(restored.files[0].taskId,task.id);assert.equal(restored.utilities.length,1);
+ const repeated=guest.prepareGuestRestore(destination,source.getItem(guest.GUEST_STORAGE_KEY));assert.deepEqual(repeated.counts,{tasks:0,files:0,utilities:0,skipped:3});
+});
+test('changed colliding task and file backups become separate copies with imported task links intact',()=>{
+ const source=memory();guest.saveGuestTask(source,task);guest.saveGuestFile(source,file);const raw=source.getItem(guest.GUEST_STORAGE_KEY);
+ const destination=memory();guest.writeGuestData(destination,guest.readGuestData(source));
+ guest.saveGuestTask(destination,{...task,title:'Newer task'});
+ const original=guest.readGuestData(destination).files[0];guest.saveGuestFile(destination,{...original,title:'Newer document'});
+ const restored=guest.restoreGuestBackup(destination,guest.prepareGuestRestore(destination,raw));
+ assert.equal(restored.tasks.length,2);assert.equal(restored.files.length,2);
+ assert.equal(restored.tasks.find(t=>t.id===task.id).title,'Newer task');assert.equal(restored.files.find(f=>f.id===original.id).title,'Newer document');
+ const imported=restored.tasks.find(t=>t.id!==task.id),importedFile=restored.files.find(f=>f.id!==original.id);assert.equal(importedFile.taskId,imported.id);assert.equal(importedFile.title,file.title);
+});
+test('invalid, oversized, disconnected, or capacity-exceeding guest backups never change saved data',()=>{
+ const storage=memory();guest.saveGuestTask(storage,task);const before=storage.getItem(guest.GUEST_STORAGE_KEY);
+ for(const raw of ['bad json',JSON.stringify({...guest.emptyGuestData(),version:2}),'x'.repeat(2_000_001),JSON.stringify({...guest.emptyGuestData(),files:[{...file,id:'saved',revision:1}]})])assert.throws(()=>guest.prepareGuestRestore(storage,raw));
+ const full=guest.emptyGuestData();full.tasks=Array.from({length:500},(_,i)=>({...task,id:'full-'+i}));guest.writeGuestData(storage,full);const fullRaw=storage.getItem(guest.GUEST_STORAGE_KEY);
+ assert.throws(()=>guest.prepareGuestRestore(storage,before),/exceed/);assert.equal(storage.getItem(guest.GUEST_STORAGE_KEY),fullRaw);
+});
+test('guest restore detects changes after review and handles quota failure without data loss',()=>{
+ const storage=memory(),raw=JSON.stringify({...guest.emptyGuestData(),tasks:[task]});const plan=guest.prepareGuestRestore(storage,raw);
+ guest.saveGuestTask(storage,{...task,id:'new',title:'New work in another tab'});const before=storage.getItem(guest.GUEST_STORAGE_KEY);
+ assert.throws(()=>guest.restoreGuestBackup(storage,plan),/another tab/);assert.equal(storage.getItem(guest.GUEST_STORAGE_KEY),before);
+ const blocked={getItem:storage.getItem,setItem(){throw Error('quota');}};
+ assert.throws(()=>guest.restoreGuestBackup(blocked,guest.prepareGuestRestore(blocked,raw)),/full or blocked/);assert.equal(storage.getItem(guest.GUEST_STORAGE_KEY),before);
+});

@@ -14,6 +14,7 @@ import {
 import { streamChatClient } from "@/lib/ai-studio/chat/streamClient";
 import { type ChatSettings, DEFAULT_SETTINGS } from "@/lib/ai-studio/chat/settings";
 import { conversationChatRequest,serializeChatRequest } from "@/lib/ai-studio/chat/outgoing-request";
+import { readChatImport } from "@/lib/ai-studio/storage/import";
 
 /**
  * Orchestrates conversations: IndexedDB persistence, streaming sends,
@@ -30,6 +31,7 @@ export function useChat(
   const [streamingId, setStreamingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const importingRef = useRef(false);
 
   useEffect(()=>()=>{abortRef.current?.abort();},[]);
 
@@ -38,7 +40,7 @@ export function useChat(
   settingsRef.current = settings;
 
   useEffect(() => {
-    getAllConversations().then(setConversations).catch(() => undefined);
+    getAllConversations().then(setConversations).catch(err => setError(`History could not be loaded: ${String(err)}`));
   }, []);
 
   const activeConversation =
@@ -124,7 +126,7 @@ export function useChat(
 
   const send = useCallback(
     (text: string, attachments: Attachment[] = []) => {
-      if (!selectedModelId || busy || abortRef.current) return false;
+      if (!selectedModelId || busy || abortRef.current || importingRef.current) return false;
       const userMsg: StoredMessage = {
         id: newId(),
         role: "user",
@@ -169,7 +171,7 @@ export function useChat(
   }, []);
 
   const regenerate = useCallback(() => {
-    if (!activeConversation || busy || abortRef.current) return;
+    if (!activeConversation || busy || abortRef.current || importingRef.current) return;
     let lastUserIdx = -1;
     for (let i = activeConversation.messages.length - 1; i >= 0; i--) {
       if (activeConversation.messages[i].role === "user") {
@@ -184,7 +186,7 @@ export function useChat(
   /** Removes the message (and everything after); returns its text for prefill. */
   const editMessage = useCallback(
     (target: StoredMessage): string | null => {
-      if (!activeConversation || busy || abortRef.current) return null;
+      if (!activeConversation || busy || abortRef.current || importingRef.current) return null;
       const idx = activeConversation.messages.findIndex((m) => m.id === target.id);
       if (idx === -1) return null;
       const kept = activeConversation.messages.slice(0, idx);
@@ -196,7 +198,7 @@ export function useChat(
   );
 
   const select = useCallback((id: string) => {
-    if(busy||abortRef.current){setError("Stop the current reply before switching chats.");return;}
+    if(busy||abortRef.current||importingRef.current){setError("Wait for the current action or stop the reply before switching chats.");return;}
     if (id === "") {
       setActiveId(null);
       setMessages([]);
@@ -209,12 +211,12 @@ export function useChat(
         setMessages(conv.messages);
         setConversations(all);
       }
-    });
+    }).catch(err => setError(`Chat could not be opened: ${String(err)}`));
   }, [busy]);
 
   const remove = useCallback(
     (id: string) => {
-      if(busy||abortRef.current){setError("Stop the current reply before removing a chat.");return;}
+      if(busy||abortRef.current||importingRef.current){setError("Wait for the current action or stop the reply before removing a chat.");return;}
       dbDelete(id)
         .then(() => setConversations((prev) => prev.filter((c) => c.id !== id)))
         .then(() => {
@@ -223,10 +225,27 @@ export function useChat(
             setMessages([]);
           }
         })
-        .catch(() => undefined);
+        .catch(err => setError(`Chat could not be deleted: ${String(err)}`));
     },
     [activeId,busy],
   );
+
+  const importChat = useCallback(async (text: string) => {
+    if (busy || abortRef.current || importingRef.current) throw Error("Wait for the current action or stop the reply before importing a chat.");
+    const conversation = readChatImport(text);
+    importingRef.current = true;
+    setBusy(true);
+    try {
+      await saveConversation(conversation);
+      setConversations(previous => [conversation, ...previous]);
+      setActiveId(conversation.id);
+      setMessages(conversation.messages);
+      setError(null);
+    } finally {
+      importingRef.current = false;
+      setBusy(false);
+    }
+  }, [busy]);
 
   return {
     conversations,
@@ -241,5 +260,6 @@ export function useChat(
     editMessage,
     select,
     remove,
+    importChat,
   };
 }

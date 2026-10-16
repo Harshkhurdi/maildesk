@@ -30,6 +30,42 @@ export function writeGuestData(storage:BrowserStorage,data:GuestData):GuestData{
   try{storage.setItem(GUEST_STORAGE_KEY,raw);}catch{throw Error("Guest storage is full or blocked. Download your work before closing this tab.");}
   return parsed.data;
 }
+export function parseGuestBackup(raw:string):GuestData{
+  if(raw.length>MAX_CHARACTERS)throw Error("This backup is larger than the guest workspace limit.");
+  try{return schema.parse(JSON.parse(raw));}
+  catch{throw Error("Choose a valid Maildesk guest backup. Its tasks, linked files, and saved tools must be complete.");}
+}
+export function prepareGuestRestore(storage:BrowserStorage,raw:string){
+  const incoming=parseGuestBackup(raw),previous=storage.getItem(GUEST_STORAGE_KEY),current=readGuestData(storage);
+  const data:GuestData={version:1,tasks:[...current.tasks],files:[...current.files],utilities:[...current.utilities]};
+  const counts={tasks:0,files:0,utilities:0,skipped:0};
+  const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
+  const remappedTasks=new Map<string,string>();
+  for(const item of incoming.tasks){
+    const existing=data.tasks.find(saved=>saved.id===item.id);
+    if(existing&&same(existing,item)){remappedTasks.set(item.id,item.id);counts.skipped++;continue;}
+    const id=existing?crypto.randomUUID():item.id;
+    remappedTasks.set(item.id,id);data.tasks.push({...item,id});counts.tasks++;
+  }
+  for(const item of incoming.files){
+    const saved={...item,taskId:item.taskId?remappedTasks.get(item.taskId)!:null};
+    const existing=data.files.find(f=>f.id===item.id);
+    if(existing&&same(existing,saved)){counts.skipped++;continue;}
+    data.files.push({...saved,id:existing?crypto.randomUUID():item.id});counts.files++;
+  }
+  for(const item of incoming.utilities){
+    const existing=data.utilities.find(saved=>saved.id===item.id);
+    if(existing&&same(existing,item)){counts.skipped++;continue;}
+    data.utilities.push({...item,id:existing?crypto.randomUUID():item.id});counts.utilities++;
+  }
+  const parsed=schema.safeParse(data);
+  if(!parsed.success||JSON.stringify(parsed.data).length>MAX_CHARACTERS)throw Error("This backup and your current work exceed the guest workspace limit. Nothing was changed.");
+  return {data:parsed.data,previous,counts};
+}
+export function restoreGuestBackup(storage:BrowserStorage,plan:ReturnType<typeof prepareGuestRestore>):Workspace{
+  if(storage.getItem(GUEST_STORAGE_KEY)!==plan.previous)throw Error("Your guest workspace changed in another tab. Choose the backup again to review the latest work.");
+  return guestWorkspace(writeGuestData(storage,plan.data));
+}
 export function saveGuestTask(storage:BrowserStorage,value:Task):Workspace{
   const data=readGuestData(storage),parsed=task.safeParse(value);if(!parsed.success)throw Error("Check the task title, dates, and link.");data.tasks=[parsed.data,...data.tasks.filter(t=>t.id!==value.id)];return guestWorkspace(writeGuestData(storage,data));
 }
