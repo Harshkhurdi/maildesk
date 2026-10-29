@@ -7,4 +7,4 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.next();
   return auth().middleware({ loginUrl: "/auth/sign-in" })(request);
 }
-export const config = { matcher: ["/", "/ai-studio/:path*"] };
+export const config = { matcher: ["/", "/ai-studio/:path*", "/pdf/:path*"] };

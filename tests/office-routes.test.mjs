@@ -250,3 +250,80 @@ test("guest workspace cannot list, download, rename or save another identity’s
   assert.equal(f.state.officeFiles[0].ownerId, "owner");
   assert.equal(f.state.officeFiles[1].ownerId, "guest_isolated");
 });
+
+const deletion = (revision) =>
+  new Request("https://app.example.test/api/office/files/file", {
+    method: "DELETE",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ revision }),
+  });
+test("deleting a native file atomically removes its current data and all versions", async () => {
+  const f = await fixture(),
+    file = await f.create();
+  await f.patch.PATCH(
+    upload(await createNativeFile("document", "Saved edit"), "Native.docx", 1),
+    context(file.id),
+  );
+  const kept = await f.create();
+  assert.equal(f.state.officeVersions.length, 3);
+  const response = await f.patch.DELETE(deletion(2), context(file.id));
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).deleted, true);
+  assert.equal(f.state.officeFiles.length, 1);
+  assert.equal(f.state.officeFiles[0].id, kept.id);
+  assert.equal(f.state.officeVersions.length, 1);
+  assert.equal(f.state.officeVersions[0].fileId, kept.id);
+  assert.equal(
+    (
+      await f.download.GET(
+        new Request("https://app.example.test/download?revision=1"),
+        context(file.id),
+      )
+    ).status,
+    404,
+  );
+});
+test("deletion rejects foreign users, stale revisions, missing files and signed-out requests", async () => {
+  const f = await fixture(),
+    file = await f.create();
+  f.setUser("another-guest");
+  assert.equal(
+    (await f.patch.DELETE(deletion(1), context(file.id))).status,
+    404,
+  );
+  f.setUser("owner");
+  assert.equal(
+    (await f.patch.DELETE(deletion(2), context(file.id))).status,
+    409,
+  );
+  assert.equal(
+    (await f.patch.DELETE(deletion(undefined), context(file.id))).status,
+    400,
+  );
+  assert.equal(
+    (await f.patch.DELETE(deletion(1), context("missing"))).status,
+    404,
+  );
+  assert.equal(f.state.officeVersions.length, 1);
+  f.signOut();
+  assert.equal(
+    (await f.patch.DELETE(deletion(1), context(file.id))).status,
+    401,
+  );
+  assert.equal(f.state.officeFiles.length, 1);
+});
+test("a failed deletion rolls back removal of earlier versions", async () => {
+  const f = await fixture(),
+    file = await f.create(),
+    remove = f.db.delete;
+  f.db.delete = (table) => {
+    if (table === f.tables.officeFiles) throw Error("Fixture storage failure");
+    return remove(table);
+  };
+  assert.equal(
+    (await f.patch.DELETE(deletion(1), context(file.id))).status,
+    500,
+  );
+  assert.equal(f.state.officeFiles.length, 1);
+  assert.equal(f.state.officeVersions.length, 1);
+});

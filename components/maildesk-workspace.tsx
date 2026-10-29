@@ -21,6 +21,7 @@ import {
   Search,
   Settings,
   Pencil,
+  Trash2,
   Upload,
   X,
 } from "lucide-react";
@@ -67,7 +68,32 @@ export default function Maildesk() {
     [showLegacy, setShowLegacy] = useState(false);
   const [template, setTemplate] = useState("blank"),
     [view, setView] = useState<"list" | "grid">("list");
-  const upload = useRef<HTMLInputElement>(null);
+  const upload = useRef<HTMLInputElement>(null),
+    deleteDialog = useRef<HTMLDialogElement>(null);
+  const [deleteTarget, setDeleteTarget] = useState<NativeFile | null>(null),
+    [deleteError, setDeleteError] = useState("");
+  useEffect(() => {
+    if (deleteTarget) deleteDialog.current?.showModal();
+  }, [deleteTarget]);
+  async function deleteFile() {
+    if (!deleteTarget || busy) return;
+    setBusy(true);
+    setDeleteError("");
+    try {
+      await suiteApi(`/api/office/files/${deleteTarget.id}`, "DELETE", {
+        revision: deleteTarget.revision,
+      });
+      setFiles((current) =>
+        current.filter((file) => file.id !== deleteTarget.id),
+      );
+      setDeleteTarget(null);
+    } catch (e) {
+      setDeleteError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const reload = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -497,40 +523,54 @@ export default function Maildesk() {
                         v{file.revision}
                       </span>
                     </button>
-                    <button
-                      className="file-rename"
-                      aria-label={`Rename ${file.title}`}
-                      disabled={busy}
-                      onClick={async () => {
-                        const name = prompt("File name", file.title);
-                        if (!name?.trim() || name === file.title) return;
-                        setBusy(true);
-                        try {
-                          const result = await suiteApi<{ file: NativeFile }>(
-                            `/api/office/files/${file.id}`,
-                            "PATCH",
-                            { title: name },
-                          );
-                          setFiles((current) =>
-                            current.map((f) =>
-                              f.id === file.id ? result.file : f,
-                            ),
-                          );
-                        } catch (e) {
-                          setError((e as Error).message);
-                        } finally {
-                          setBusy(false);
-                        }
-                      }}
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    <a
-                      href={`/api/office/files/${file.id}/download`}
-                      aria-label={`Download ${file.title}`}
-                    >
-                      <Download size={16} />
-                    </a>
+                    <div className="file-actions">
+                      <button
+                        className="file-rename"
+                        aria-label={`Rename ${file.title}`}
+                        disabled={busy}
+                        onClick={async () => {
+                          const name = prompt("File name", file.title);
+                          if (!name?.trim() || name === file.title) return;
+                          setBusy(true);
+                          try {
+                            const result = await suiteApi<{ file: NativeFile }>(
+                              `/api/office/files/${file.id}`,
+                              "PATCH",
+                              { title: name },
+                            );
+                            setFiles((current) =>
+                              current.map((f) =>
+                                f.id === file.id ? result.file : f,
+                              ),
+                            );
+                          } catch (e) {
+                            setError((e as Error).message);
+                          } finally {
+                            setBusy(false);
+                          }
+                        }}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <a
+                        href={`/api/office/files/${file.id}/download`}
+                        aria-label={`Download ${file.title}`}
+                      >
+                        <Download size={16} />
+                      </a>
+                      <button
+                        className="file-delete"
+                        aria-label={`Delete ${file.title}`}
+                        title={`Delete ${file.title}`}
+                        disabled={busy}
+                        onClick={() => {
+                          setDeleteError("");
+                          setDeleteTarget(file);
+                        }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -660,6 +700,51 @@ export default function Maildesk() {
             {error && <p className="suite-error">{error}</p>}
           </form>
         </div>
+      )}
+      {deleteTarget && (
+        <dialog
+          ref={deleteDialog}
+          className="suite-dialog file-delete-dialog"
+          aria-labelledby="delete-file-heading"
+          aria-describedby="delete-file-description"
+          onCancel={(event) => {
+            event.preventDefault();
+            if (!busy) setDeleteTarget(null);
+          }}
+        >
+          <header>
+            <h2 id="delete-file-heading">Delete this file?</h2>
+          </header>
+          <p id="delete-file-description">
+            <strong>{deleteTarget.title}</strong> and all its saved versions
+            will be permanently deleted.
+          </p>
+          {deleteTarget.sourceFileId && (
+            <p>The earlier MailDesk original will be kept.</p>
+          )}
+          {deleteError && (
+            <p className="suite-error" role="alert">
+              {deleteError}
+            </p>
+          )}
+          <footer>
+            <button
+              className="suite-button"
+              disabled={busy}
+              onClick={() => setDeleteTarget(null)}
+            >
+              Cancel
+            </button>
+            <button
+              className="suite-button primary danger"
+              disabled={busy}
+              onClick={() => void deleteFile()}
+            >
+              <Trash2 size={15} />
+              {busy ? "Deleting…" : "Delete file"}
+            </button>
+          </footer>
+        </dialog>
       )}
       {settings && (
         <div className="suite-overlay">

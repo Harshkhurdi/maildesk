@@ -25,6 +25,14 @@ Outlook supports **Gmail and Google Calendar**, not Microsoft/Exchange accounts:
 
 Free AI Studio retains streaming, settings, saved browser conversations, explicit attachments and import/export, with verified zero-price model enforcement. Calling, person-to-person messaging, code execution, tasks, shopping and web utility routes are retired. The original tables and browser keys remain; no data-drop migration is included. Google disconnect disables the credential without deleting files, cached mail or retired records.
 
+## PDF workspace and recent-file deletion
+
+The **PDF** sidebar tool at `/pdf` is available to email users and guests. It opens local PDFs up to 100 MB without uploading them. Gmail attachments use the same viewer, with the existing 3 MB attachment limit. PDF.js and the export library load on demand from static assets; rendering, searching, forms and marked-copy generation run on the device, without a PDF API, conversion worker on Vercel, database writes or background polling.
+
+The viewer includes lazy page thumbnails, bookmarks, page navigation, selectable/searchable text, zoom, view rotation, focus view, safe links, printing and original downloads. Users can highlight text/areas, draw, add Unicode sticky notes, undo/redo markups and fill common AcroForm text fields, checkboxes and dropdowns. **Save copy** downloads form values plus flattened highlight/ink marks and portable PDF sticky notes, leaving the original unchanged. Unsaved changes warn before closing or navigating away. Export may be unavailable for encrypted/signed files. OCR, redaction, digital signing, existing PDF text editing, XFA and full Acrobat parity are not included. Rotate changes the view only. Local PDF files do not appear in cloud recent files.
+
+Each recent Word, Excel or PowerPoint file has a delete button in both list and grid views. A confirmation names the file and explains that all saved versions are permanently removed. The owner-scoped API locks the current row and validates the shown revision; concurrent changes return a refresh message. Current data and version history are deleted in one transaction, with no blob read and no effect on other users or files. Earlier legacy source files are kept. Failed requests retain the file in the UI and allow retry.
+
 ## Guest access and signup
 
 The sign-in page offers **Continue as guest** and **Create an account**. Both can use all five apps. A guest gets a server-issued, HTTP-only, signed session and an independent workspace, without an email or password. Email signup uses the existing verified email-code flow; new verified users are no longer blocked by the original owner-only gate.

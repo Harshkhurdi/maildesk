@@ -1,6 +1,7 @@
 // Isolated browser UI checks. Providers are mocked; no real email/calendar action is sent.
 import assert from "node:assert/strict";
 import JSZip from "jszip";
+import { checkPdfWorkspace } from "./pdf-ui-check.mjs";
 import { NEON_AUTH_SESSION_COOKIE_NAME } from "@neondatabase/auth/server";
 import { access, mkdir, rm, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
@@ -69,6 +70,9 @@ const event = {
   attendees: [],
   reminders: { overrides: [{ method: "popup", minutes: 30 }] },
 };
+let deleted = false,
+  failDelete = true,
+  deleteRequests = 0;
 let nativeBytes = null,
   failSave = true,
   officeRequests = 0;
@@ -164,7 +168,7 @@ try {
         userName: "Fixture Owner",
       });
     if (path === "/api/office/files" && method === "GET")
-      return send({ files: [native], configured: true });
+      return send({ files: deleted ? [] : [native], configured: true });
     if (path === "/api/office/files" && method === "POST") {
       const form = await new Response(request.postDataBuffer(), {
         headers: { "content-type": request.headers()["content-type"] },
@@ -176,6 +180,7 @@ try {
         native.extension
       ];
       native.revision = 1;
+      deleted = false;
       return send({ file: native }, 201);
     }
     if (path.endsWith("/download"))
@@ -185,6 +190,19 @@ try {
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         body: Buffer.from(nativeBytes),
       });
+    if (path === "/api/office/files/fixture-native" && method === "DELETE") {
+      deleteRequests++;
+      assert.equal(request.postDataJSON().revision, native.revision);
+      if (failDelete) {
+        failDelete = false;
+        return send(
+          { error: "Fixture deletion unavailable. Please retry." },
+          503,
+        );
+      }
+      deleted = true;
+      return send({ deleted: true, id: native.id });
+    }
     if (path === "/api/office/files/fixture-native" && method === "PATCH") {
       officeRequests++;
       if (failSave) {
@@ -494,6 +512,35 @@ try {
     assert.equal(pdf.subarray(0, 5).toString(), "%PDF-");
     await page.getByRole("button", { name: "Back", exact: true }).click();
   }
+  const deleteButton = () =>
+    page.getByRole("button", { name: "Delete " + native.title, exact: true });
+  await deleteButton().click();
+  const removeDialog = page.getByRole("dialog", { name: "Delete this file?" });
+  await removeDialog
+    .getByRole("button", { name: "Cancel", exact: true })
+    .click();
+  assert.equal(deleteRequests, 0);
+  await deleteButton().waitFor();
+  await page.getByRole("button", { name: "Grid view", exact: true }).click();
+  await deleteButton().click();
+  await removeDialog
+    .getByRole("button", { name: "Delete file", exact: true })
+    .click();
+  await removeDialog
+    .getByRole("alert")
+    .filter({ hasText: "Fixture deletion unavailable" })
+    .waitFor();
+  await removeDialog
+    .getByRole("button", { name: "Cancel", exact: true })
+    .click();
+  await deleteButton().waitFor();
+  await page.getByRole("button", { name: "List view", exact: true }).click();
+  await deleteButton().click();
+  await removeDialog
+    .getByRole("button", { name: "Delete file", exact: true })
+    .click();
+  await deleteButton().waitFor({ state: "hidden" });
+  assert.equal(deleteRequests, 2);
   await page
     .getByRole("navigation", { name: "Applications" })
     .getByRole("link", { name: "Outlook", exact: true })
@@ -580,6 +627,7 @@ try {
     ),
     "Word workspace overflows the mobile viewport",
   );
+  await checkPdfWorkspace(page, base, screenshotDirectory);
   await page.goto(base + "/ai-studio");
   await page.locator("#ai-studio-shell").waitFor();
   await page.waitForFunction(
@@ -609,7 +657,7 @@ try {
   );
   assert.deepEqual(errors, [], "Browser console errors");
   console.log(
-    "PASS: real guest signup/cookies/logout, email signup UI, isolated AI history, five-app navigation, real Word/Excel/PowerPoint create/edit/save, failed-save recovery, PDF exports, history/AI panel, sanitized threads, reply draft/send, calendar views/event form, mobile Word layout. All provider writes were mocked.",
+    "PASS: real guest signup/cookies/logout, email signup UI, isolated AI history, five-app navigation, real Word/Excel/PowerPoint create/edit/save, failed-save recovery, PDF exports, history/AI panel, sanitized threads, reply draft/send, calendar views/event form, mobile Word layout, confirmed file deletion/retry, PDF navigation/search/forms/highlight/ink/notes/portable export and mobile PDF layout. All provider writes were mocked.",
   );
 } finally {
   await browser?.close();

@@ -187,6 +187,30 @@ export function memoryDatabase() {
         },
       };
     },
+    delete(table) {
+      return {
+        where(condition) {
+          let done = false,
+            result;
+          const run = () => {
+            if (!done) {
+              result = state[table.tableName].filter(condition);
+              state[table.tableName] = state[table.tableName].filter(
+                (row) => !condition(row),
+              );
+              done = true;
+            }
+            return result.map((row) => ({ ...row }));
+          };
+          return {
+            returning: async () => run(),
+            then(resolve, reject) {
+              return Promise.resolve().then(run).then(resolve, reject);
+            },
+          };
+        },
+      };
+    },
     transaction(callback) {
       const run = queue.then(async () => {
         const backup = structuredClone(state);

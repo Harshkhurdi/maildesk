@@ -70,19 +70,61 @@ export async function PATCH(
           })
           .where(where)
           .returning(officeProjection);
-      await tx
-        .insert(officeVersions)
-        .values({
-          fileId: id,
-          ownerId: user.userId,
-          revision: row.revision,
-          data: data.toString("base64"),
-          hash,
-          createdAt: timestamp,
-        });
+      await tx.insert(officeVersions).values({
+        fileId: id,
+        ownerId: user.userId,
+        revision: row.revision,
+        data: data.toString("base64"),
+        hash,
+        createdAt: timestamp,
+      });
       return row;
     });
     return json({ file: officeMetadata(saved) });
+  } catch (e) {
+    return failure(e);
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { user, db } = await guard(request),
+      { id } = await params;
+    const parsed = z
+      .object({ revision: z.number().int().positive() })
+      .safeParse(await body(request));
+    if (!parsed.success)
+      throw new HttpError(400, "Refresh this file before deleting it.");
+    await db.transaction(async (tx) => {
+      const where = and(
+        eq(officeFiles.id, id),
+        eq(officeFiles.ownerId, user.userId),
+      );
+      const [current] = await tx
+        .select({ id: officeFiles.id, revision: officeFiles.revision })
+        .from(officeFiles)
+        .where(where)
+        .for("update");
+      if (!current) throw new HttpError(404, "File not found.");
+      if (current.revision !== parsed.data.revision)
+        throw new HttpError(
+          409,
+          "This file changed in another tab. Refresh your files before deleting it.",
+        );
+      await tx
+        .delete(officeVersions)
+        .where(
+          and(
+            eq(officeVersions.fileId, id),
+            eq(officeVersions.ownerId, user.userId),
+          ),
+        );
+      await tx.delete(officeFiles).where(where);
+    });
+    return json({ deleted: true, id });
   } catch (e) {
     return failure(e);
   }

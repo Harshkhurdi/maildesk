@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./office.css";
+import "./pdf.css";
 
 export const metadata: Metadata = {
   title: "MailDesk — your productivity workspace",
