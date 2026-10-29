@@ -1963,3 +1963,107 @@ select:focus {
     margin-top: 28px;
   }
 }
+.file-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
+}
+.file-actions > button,
+.file-actions > a {
+  position: static;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  border-radius: 4px;
+  color: #616161;
+}
+.file-actions > button:hover,
+.file-actions > a:hover {
+  background: #e7edf5;
+}
+.file-actions .file-delete {
+  color: #a4262c;
+}
+.file-actions .file-delete:hover {
+  background: #fdecee;
+}
+.office-files-list .suite-file-card {
+  grid-template-columns: minmax(0, 1fr) 96px;
+}
+.office-files-list .office-list-head {
+  grid-template-columns: minmax(180px, 1fr) 180px 90px 96px;
+}
+.office-files-list .suite-file-card .file-actions .file-rename {
+  position: static;
+}
+.office-files-grid .file-actions {
+  padding: 6px 10px;
+  border-top: 1px solid #eee;
+  background: #fafbfc;
+}
+.office-files-grid .file-actions .file-rename {
+  position: static;
+}
+.office-files-grid .file-open > strong {
+  padding-right: 0;
+}
+.file-delete-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: 440px;
+  max-width: calc(100vw - 32px);
+  color: #242424;
+}
+.file-delete-dialog::backdrop {
+  background: #17263a66;
+  backdrop-filter: blur(2px);
+}
+.file-delete-dialog > footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 23px;
+}
+.file-delete-dialog .suite-button.primary.danger {
+  background: #b10e1e;
+  border-color: #b10e1e;
+  color: white;
+}
+.file-delete-dialog .suite-error {
+  margin: 12px 0;
+}
+.file-delete-dialog p strong {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1100px) {
+  .office-files-list .office-list-head {
+    grid-template-columns: minmax(130px, 1fr) 125px 65px 96px;
+  }
+}
+@media (max-width: 800px) {
+  .office-files-list .office-list-head {
+    grid-template-columns: minmax(100px, 1fr) 110px 96px;
+  }
+}
+@media (max-width: 560px) {
+  .office-files-list .suite-file-card {
+    grid-template-columns: minmax(0, 1fr) 84px;
+  }
+  .office-files-list .office-list-head {
+    grid-template-columns: minmax(0, 1fr) 84px;
+  }
+  .file-actions > button,
+  .file-actions > a {
+    width: 28px;
+    height: 30px;
+    padding: 6px;
+  }
+  .file-actions svg {
+    width: 14px;
+    height: 14px;
+  }
+}

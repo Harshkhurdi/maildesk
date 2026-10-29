@@ -15,6 +15,8 @@ writeFileSync(
   JSON.stringify({
     ui: "office-workspace-v2",
     guestAccess: true,
+    pdfWorkspace: true,
+    fileDeletion: true,
     environment: process.env.VERCEL_ENV ?? "local",
     databasePrepared: production,
     commit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,

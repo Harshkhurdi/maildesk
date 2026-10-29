@@ -161,6 +161,7 @@ export function OutlookWorkspace({ onSettings }: { onSettings: () => void }) {
     [signature, setSignature] = useState(""),
     [showSignature, setShowSignature] = useState(false);
   const [pdf, setPdf] = useState<PdfSource | null>(null);
+  const [pdfDirty, setPdfDirty] = useState(false);
   const account = accounts.find((a) => a.id === accountId),
     composer = useRef<HTMLDivElement>(null),
     attachmentInput = useRef<HTMLInputElement>(null),
@@ -1208,12 +1209,26 @@ export function OutlookWorkspace({ onSettings }: { onSettings: () => void }) {
               <h2>{pdf.name}</h2>
               <button
                 aria-label="Close PDF preview"
-                onClick={() => setPdf(null)}
+                onClick={() => {
+                  if (
+                    !pdfDirty ||
+                    window.confirm(
+                      "Discard unsaved PDF changes? Use Save copy first to keep them.",
+                    )
+                  ) {
+                    setPdf(null);
+                    setPdfDirty(false);
+                  }
+                }}
               >
                 <X size={20} />
               </button>
             </header>
-            <PdfPreview source={pdf} onSource={setPdf} />
+            <PdfPreview
+              source={pdf}
+              onSource={setPdf}
+              onDirtyChange={setPdfDirty}
+            />
           </section>
         </div>
       )}
