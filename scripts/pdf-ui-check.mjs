@@ -37,7 +37,7 @@ export async function checkPdfWorkspace(page, base, screenshots) {
   const bytes = Buffer.from(await doc.save());
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(base + "/pdf");
-  await page.getByRole("heading", { name: "Your PDF workspace." }).waitFor();
+  await page.getByRole("heading", { name: /Your documents/ }).waitFor();
   await page.getByLabel("Choose a PDF file").setInputFiles({
     name: "Reader fixture.pdf",
     mimeType: "application/pdf",
@@ -142,6 +142,7 @@ export async function checkPdfWorkspace(page, base, screenshots) {
     fullPage: true,
   });
   const originalEvent = page.waitForEvent("download");
+  await page.getByRole("button", { name: "More PDF actions" }).click();
   await page.getByRole("button", { name: "Download PDF", exact: true }).click();
   assert.deepEqual(await readFile(await (await originalEvent).path()), bytes);
   const savedEvent = page.waitForEvent("download");
@@ -174,8 +175,9 @@ export async function checkPdfWorkspace(page, base, screenshots) {
     ),
     "PDF workspace overflows mobile viewport",
   );
+  await page.getByRole("button", { name: "More PDF actions" }).click();
   await page.getByRole("button", { name: "Close PDF", exact: true }).click();
-  await page.getByRole("heading", { name: "Your PDF workspace." }).waitFor();
+  await page.getByRole("heading", { name: /Your documents/ }).waitFor();
   await page.getByLabel("Choose a PDF file").setInputFiles({
     name: "Broken.pdf",
     mimeType: "application/pdf",

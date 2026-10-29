@@ -17,6 +17,8 @@ writeFileSync(
     guestAccess: true,
     pdfWorkspace: true,
     fileDeletion: true,
+    mobileDesign: "bottom-navigation-v1",
+    pdfDesign: "studio-v2",
     environment: process.env.VERCEL_ENV ?? "local",
     databasePrepared: production,
     commit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,

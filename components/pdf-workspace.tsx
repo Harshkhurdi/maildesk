@@ -13,7 +13,9 @@ export default function PdfWorkspace() {
   const [source, setSource] = useState<PdfSource | null>(null),
     [dirty, setDirty] = useState(false);
   return (
-    <div className="suite-shell office-shell pdf-workspace">
+    <div
+      className={`suite-shell office-shell pdf-workspace ${source ? "has-pdf" : "pdf-welcome"}`}
+    >
       <header className="office-topbar">
         <Link
           className="office-brand"
@@ -32,11 +34,11 @@ export default function PdfWorkspace() {
           <strong>MailDesk</strong>
           <span className="office-brand-divider" />
           <FileText size={19} />
-          <span>PDF</span>
+          <span>PDF Studio</span>
         </Link>
         <span className="pdf-workspace-private">
           <ShieldCheck size={15} />
-          On-device PDF tools
+          Private, on-device workspace
         </span>
       </header>
       <aside
@@ -73,7 +75,7 @@ export default function PdfWorkspace() {
             <ArrowLeft size={16} />
             My workspace
           </Link>
-          <span>PDF reader & markup</span>
+          <span>PDF Studio</span>
         </div>
         <PdfViewer
           source={source}

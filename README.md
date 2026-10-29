@@ -33,6 +33,8 @@ The viewer includes lazy page thumbnails, bookmarks, page navigation, selectable
 
 Each recent Word, Excel or PowerPoint file has a delete button in both list and grid views. A confirmation names the file and explains that all saved versions are permanently removed. The owner-scoped API locks the current row and validates the shown revision; concurrent changes return a refresh message. Current data and version history are deleted in one transaction, with no blob read and no effect on other users or files. Earlier legacy source files are kept. Failed requests retain the file in the UI and allow retry.
 
+The responsive suite uses a bottom app bar on phones, full-width file libraries with swipeable templates, larger controls, and a mobile inbox-to-message view with a back action. PDF Studio has a separate welcome layout for desktop and mobile, a document header with a persistent **Save copy** action, a **More** menu for original downloads/printing/focus/close, and grouped page/zoom controls. Mobile navigation, search, text and comment panels overlay the reader instead of shrinking the page; markup tools float above the reading area. Device files, PDF form values, annotations and export behavior remain browser-local.
+
 ## Guest access and signup
 
 The sign-in page offers **Continue as guest** and **Create an account**. Both can use all five apps. A guest gets a server-issued, HTTP-only, signed session and an independent workspace, without an email or password. Email signup uses the existing verified email-code flow; new verified users are no longer blocked by the original owner-only gate.

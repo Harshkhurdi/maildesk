@@ -314,8 +314,8 @@ export default function Maildesk() {
         {identity.isGuest && (
           <div className="guest-workspace-banner">
             <span>
-              <strong>Guest workspace</strong> · All five apps are available.
-              Access is tied to this browser for 30 days.
+              <strong>Guest workspace</strong> · Access from this browser for 30
+              days.
             </span>
             <Link href="/auth/sign-in?signup=1">Sign up with email</Link>
           </div>

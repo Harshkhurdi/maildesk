@@ -358,6 +358,16 @@ export function OutlookWorkspace({ onSettings }: { onSettings: () => void }) {
         );
         if (sequence !== generation.current) return;
         setThread(r.messages);
+        if (window.matchMedia("(max-width: 760px)").matches)
+          requestAnimationFrame(() =>
+            window.scrollTo({
+              top: 0,
+              behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+                .matches
+                ? "auto"
+                : "smooth",
+            }),
+          );
       }
     } catch (e) {
       if (sequence === generation.current) setError((e as Error).message);
@@ -563,7 +573,9 @@ export function OutlookWorkspace({ onSettings }: { onSettings: () => void }) {
           onSettings={onSettings}
         />
       ) : (
-        <div className="outlook-columns">
+        <div
+          className={`outlook-columns ${thread.length ? "thread-open" : ""}`}
+        >
           <aside className="mail-folders">
             <button
               className="suite-button primary"
@@ -738,6 +750,15 @@ export function OutlookWorkspace({ onSettings }: { onSettings: () => void }) {
             </div>
           </section>
           <section className="reading-pane">
+            {!!thread.length && (
+              <button
+                className="mobile-mail-back"
+                onClick={() => setThread([])}
+              >
+                <ArrowLeft size={18} />
+                Back to inbox
+              </button>
+            )}
             {!thread.length && (
               <div className="suite-empty">
                 <Mail size={38} />

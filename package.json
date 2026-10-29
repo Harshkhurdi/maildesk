@@ -6,7 +6,7 @@
     "node": "24.x"
   },
   "scripts": {
-    "dev": "next dev --webpack --hostname 127.0.0.1 --port 5174",
+    "dev": "node scripts/dev.mjs",
     "build": "next build --webpack",
     "start": "next start --hostname 127.0.0.1 --port 5174",
     "typecheck": "tsc --noEmit --incremental false",
