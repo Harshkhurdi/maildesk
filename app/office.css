@@ -1060,7 +1060,7 @@ select:focus {
 }
 .office-auth-wrap {
   display: grid;
-  grid-template-columns: minmax(360px, 460px) minmax(450px, 680px);
+  grid-template-columns: minmax(360px, 460px) minmax(450px, 1fr);
   width: 100%;
   max-width: 1200px;
   margin: auto;
