@@ -9,3 +9,5 @@ node_modules/
 public/pdfjs/
 .vercel
 .sites-runtime/
+public/office/
+.cache/

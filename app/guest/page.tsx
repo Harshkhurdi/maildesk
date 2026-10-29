@@ -1,2 +1,2 @@
-import Maildesk from "@/components/maildesk-workspace";
-export default function GuestPage(){return <Maildesk guest/>;}
+import { GuestRecovery } from "@/components/guest-recovery";
+export default function GuestPage() { return <GuestRecovery/>; }

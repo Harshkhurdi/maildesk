@@ -1,3 +1,5 @@
+> Historical audit of the earlier application. For current scope and verification, see [IMPLEMENTATION_REPORT.md](IMPLEMENTATION_REPORT.md).
+
 # Maildesk live audit — 15 October 2026
 
 Production: https://maildesk-theta.vercel.app

@@ -57,3 +57,15 @@ export const conversationSignals = pgTable("conversation_signals", {
 
 export const utilities=pgTable("utilities",{id:text("id").primaryKey(),ownerId:text("owner_id").notNull(),kind:text("kind").notNull(),title:text("title").notNull(),content:text("content").notNull(),revision:integer("revision").notNull().default(1),updatedAt:text("updated_at").notNull()},t=>[index("utilities_owner_kind").on(t.ownerId,t.kind)]);
 export const xConnections=pgTable("x_connections",{ownerId:text("owner_id").primaryKey(),xId:text("x_id").notNull(),username:text("username").notNull(),name:text("name").notNull(),token:text("token").notNull(),feed:text("feed").notNull().default("{}"),fetchedAt:bigint("fetched_at",{mode:"number"}).notNull().default(0),updatedAt:text("updated_at").notNull()});
+
+// Native OOXML files are separate from legacy JSON files. No legacy rows are removed.
+export const officeFiles = pgTable("office_files", {
+  id: text("id").primaryKey(), ownerId: text("owner_id").notNull(), kind: text("kind").notNull(),
+  title: text("title").notNull(), extension: text("extension").notNull(), data: text("data").notNull(),
+  hash: text("hash").notNull(), revision: integer("revision").notNull().default(1),
+  sourceFileId: text("source_file_id"), createdAt: text("created_at").notNull(), updatedAt: text("updated_at").notNull(),
+}, t => [index("office_files_owner").on(t.ownerId), uniqueIndex("office_source_copy").on(t.ownerId, t.sourceFileId)]);
+export const officeVersions = pgTable("office_versions", {
+  fileId: text("file_id").notNull(), ownerId: text("owner_id").notNull(), revision: integer("revision").notNull(),
+  data: text("data").notNull(), hash: text("hash").notNull(), createdAt: text("created_at").notNull(),
+}, t => [uniqueIndex("office_version").on(t.fileId, t.revision), index("office_versions_owner").on(t.ownerId, t.fileId)]);

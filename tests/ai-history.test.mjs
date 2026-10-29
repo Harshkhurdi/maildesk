@@ -65,10 +65,10 @@ test('AI history saves and deletes resolve only after transaction commit, and ab
 function isolatedChat(saveConversation){
   const state=[],refs=[];let next=0,refNext=0,providerCalls=0;
   const react={useState:initial=>{const index=next++;state[index]=initial;return [initial,value=>{state[index]=typeof value==='function'?value(state[index]):value;}];},useRef:value=>{const result={current:value};refs[refNext++]=result;return result;},useCallback:fn=>fn,useEffect:()=>{}};
-  const module={};
+  const chatModule={};
   const source=readFileSync(new URL('../hooks/ai-studio/useChat.ts',import.meta.url),'utf8');
   const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-  vm.runInNewContext(code,{exports:module,AbortController,require:name=>{
+  vm.runInNewContext(code,{exports:chatModule,AbortController,require:name=>{
     if(name==='react')return react;
     if(name.endsWith('/storage/db'))return {...db,saveConversation};
     if(name.endsWith('/storage/import'))return {readChatImport};
@@ -77,7 +77,7 @@ function isolatedChat(saveConversation){
     if(name.endsWith('/chat/outgoing-request'))return {};
     throw Error('Unexpected import '+name);
   }});
-  return {chat:module.useChat('selected:free'),state,providerCalls:()=>providerCalls};
+  return {chat:chatModule.useChat('selected:free'),state,providerCalls:()=>providerCalls};
 }
 
 test('AI import waits for durable local save, never sends a prompt, and protects existing state on failure',async()=>{

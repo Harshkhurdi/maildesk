@@ -1,3 +1,5 @@
+> Historical audit of the earlier application. For current scope and verification, see [IMPLEMENTATION_REPORT.md](IMPLEMENTATION_REPORT.md).
+
 # Maildesk code audit — 15 October 2026
 
 The audit used Astra to coordinate GPT-6.1 backend and frontend reviewers. The main agent reviewed the integrated changes and handles release/browser verification. The original design is preserved. No database migration is required.

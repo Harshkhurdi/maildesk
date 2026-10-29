@@ -1,2 +1,0 @@
-export async function utilityApi(path:string,method="GET",data?:unknown){const r=await fetch(path,{method,headers:data?{"Content-Type":"application/json"}:undefined,body:data?JSON.stringify(data):undefined,cache:"no-store"});const p=await r.json();if(!r.ok)throw Error(p.error??"Could not finish this action.");return p;}
-export function saveDownload(text:string,name:string,type="text/plain"){const u=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement("a");a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}

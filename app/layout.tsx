@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Maildesk — your day, in focus",
-  description: "Your private email, task, and document workspace.",
+  title: "MailDesk — your productivity workspace",
+  description: "Word, Excel, PowerPoint, Outlook, and Free AI Studio.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

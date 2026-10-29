@@ -1,113 +1,754 @@
 "use client";
-import { useCallback,useEffect,useRef,useState } from "react";
-import dynamic from "next/dynamic";
-import {GUEST_STORAGE_KEY,emptyGuestData,readGuestData,guestWorkspace,saveGuestTask,saveGuestFile,removeGuestFile,prepareGuestRestore,restoreGuestBackup} from "@/lib/guest-store";
-const GuestCode=dynamic(()=>import("@/components/code-workspace"));
-const GuestWeb=dynamic(()=>import("@/components/web-workspace"));
-import { Code2,Globe,MessagesSquare,Upload,Sparkles,LayoutDashboard,Inbox,CheckCheck,FileText,Presentation,Table2,Settings,Plus,Search,ArrowUpRight,ArrowRight,ChevronRight,ChevronLeft,RefreshCw,ShieldCheck,Mail,Clock,MoreHorizontal,X,Link2,Check,Download,Save,Trash2,Briefcase,AlertCircle,CalendarDays,PanelLeftClose,Menu,Pause,Layers,Copy,LogOut,Filter,CheckCircle2 } from "lucide-react";
-import PdfViewer, { type PdfSource } from "@/components/pdf-viewer";
-import { DocumentEditor,SlidesEditor,SheetEditor,cleanHtml } from "@/components/editors";
-import { demoWorkspace,demoMail } from "@/lib/demo";
-import { gmailUrl,safeUrl } from "@/lib/task-rules";
-import { download,exportFile } from "@/lib/exporters";
-import type {OfficeImport} from "@/lib/office-import";
-const officeAccept={document:".docx,.txt,.html,.htm",slides:".pptx",sheet:".xlsx,.csv"};
-import { mergeSavedFile } from "@/lib/file-save";
-import type { Workspace,Task,Mail as Email,WorkspaceFile,FileKind,FileContent,TaskStatus } from "@/lib/types";
-
-type View="overview"|"inbox"|"tasks"|"document"|"slides"|"sheet"|"pdf"|"accounts"|"code"|"web";
-const blank:Workspace={accounts:[],tasks:[],files:[],mailCount:0,configured:false,callbackUrl:"",userName:""};
-const names:Record<View,string>={overview:"Overview",inbox:"All mail",tasks:"Tasks",document:"Documents",slides:"Presentations",sheet:"Spreadsheets",pdf:"PDF viewer",accounts:"Accounts & settings",code:"Code editor",web:"Web search"};
-const kindIcons={document:FileText,slides:Presentation,sheet:Table2};
-const statusNames:Record<TaskStatus,string>={review:"Needs review",pending:"Pending",waiting:"Waiting",done:"Completed",dismissed:"Dismissed",snoozed:"Snoozed"};
-type TaskForm={id?:string;title:string;status:TaskStatus;priority:string;due:string|null;category:string;notes:string;taskUrl:string|null;snoozedUntil:string|null;sourceId:string|null};
-const taskDefaults:TaskForm={title:"",status:"pending" as TaskStatus,priority:"normal",due:null,category:"general",notes:"",taskUrl:null,snoozedUntil:null,sourceId:null};
-function today(){return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata"}).format(new Date());}
-function dateLabel(d:string|null){if(!d)return "No date";if(d===today())return "Today";return new Date(d+"T12:00:00Z").toLocaleDateString("en-IN",{day:"numeric",month:"short"});}
-function timestamp(d:string|null){return d?new Date(d).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit",timeZone:"Asia/Kolkata"}):"Not synced yet";}
-async function api(path:string,method="GET",payload?:unknown){const r=await fetch(path,{method,headers:payload?{"Content-Type":"application/json"}:undefined,body:payload?JSON.stringify(payload):undefined,cache:"no-store"});let value:any;try{value=await r.json();}catch{throw Error("The workspace returned an unexpected response. Try signing in again.");}if(!r.ok)throw Error(value.error??"This action could not be completed.");return value;}
-function Modal({children,onClose,wide=false,label,notice}:{children:React.ReactNode;onClose:()=>void;wide?:boolean;label:string;notice?:string}){const ref=useRef<HTMLDialogElement>(null);useEffect(()=>{ref.current?.showModal();},[]);return <dialog ref={ref} className={wide?"modal wide":"modal"} aria-label={label} onCancel={e=>{e.preventDefault();onClose();}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}><div className="modal-inner">{children}{notice&&<div className="modal-notice" role="status">{notice}</div>}</div></dialog>;}
-function Empty({icon:Icon=Inbox,title,text,action}:{icon?:typeof Inbox;title:string;text:string;action?:React.ReactNode}){return <div className="empty"><div className="empty-icon"><Icon size={27} strokeWidth={1.5}/></div><h3>{title}</h3><p>{text}</p>{action}</div>;}
-export default function Maildesk({guest=false}:{guest?:boolean}={}){
-  const [data,setData]=useState<Workspace>(()=>guest?guestWorkspace(emptyGuestData()):blank),[view,setView]=useState<View>("overview"),[loading,setLoading]=useState(true),[error,setError]=useState(""),[toast,setToast]=useState(""),[demo,setDemo]=useState(guest),[search,setSearch]=useState(""),[account,setAccount]=useState("all"),[taskFilter,setTaskFilter]=useState("active"),[mobile,setMobile]=useState(false),[syncing,setSyncing]=useState(""),[syncProgress,setSyncProgress]=useState(""),[busy,setBusy]=useState(false);
-  const [emails,setEmails]=useState<Email[]>([]),[mailTotal,setMailTotal]=useState(0),[mailPage,setMailPage]=useState(0),[mailLoading,setMailLoading]=useState(false),[mailError,setMailError]=useState(""),[selectedMail,setSelectedMail]=useState<Email|null>(null),[selectedTask,setSelectedTask]=useState<Task|null>(null),[taskForm,setTaskForm]=useState<(typeof taskDefaults)&{id?:string}|null>(null),[editingFile,setEditingFile]=useState<WorkspaceFile|null>(null),[fileContent,setFileContent]=useState<FileContent>({}),[savedSignature,setSavedSignature]=useState("");
-  const [pdfSource,setPdfSource]=useState<PdfSource|null>(null),[pdfAttachmentLoading,setPdfAttachmentLoading]=useState(false);
-  const stopSync=useRef(false),demoRef=useRef(guest),guestImportInput=useRef<HTMLInputElement>(null),officeInput=useRef<HTMLInputElement>(null);
-  const [officeImport,setOfficeImport]=useState<OfficeImport|null>(null),[officeError,setOfficeError]=useState("");
-  const [guestRestore,setGuestRestore]=useState<ReturnType<typeof prepareGuestRestore>|null>(null);
-  async function readGuestBackup(file:File){
-    setBusy(true);try{if(file.size>8_000_000)throw Error("This backup is too large. Choose a Maildesk guest backup under 8 MB.");const plan=prepareGuestRestore(window.localStorage,await file.text());setGuestRestore(plan);}catch(e){notify((e as Error).message);}finally{setBusy(false);}
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  ArrowRight,
+  Download,
+  FileText,
+  FolderOpen,
+  LayoutGrid,
+  Plus,
+  RefreshCw,
+  Search,
+  Settings,
+  Pencil,
+  ShieldCheck,
+  Upload,
+  X,
+} from "lucide-react";
+import { SuiteNav } from "./suite-nav";
+import { OfficeEditor } from "./office-editor";
+import { OutlookWorkspace } from "./outlook-workspace";
+import { suiteApi, apps, type NativeFile } from "./suite-api";
+import { OFFICE_TEMPLATES } from "@/lib/office-templates";
+import { prepareOfficeFile } from "@/lib/office-worker-client";
+import type { FileContent, FileKind } from "@/lib/types";
+import { download } from "@/lib/exporters";
+type WorkspaceData = {
+  accounts: {
+    id: string;
+    email: string;
+    syncedAt: string | null;
+    error: string | null;
+  }[];
+  legacyFiles: {
+    id: string;
+    kind: "document" | "sheet" | "slides";
+    title: string;
+    updatedAt: string;
+  }[];
+  configured: boolean;
+  callbackUrl: string;
+  userName: string;
+};
+export default function Maildesk() {
+  const [active, setActive] = useState("document"),
+    [workspace, setWorkspace] = useState<WorkspaceData | null>(null),
+    [files, setFiles] = useState<NativeFile[]>([]),
+    [configured, setConfigured] = useState(false),
+    [loading, setLoading] = useState(true),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [query, setQuery] = useState(""),
+    [settings, setSettings] = useState(false),
+    [open, setOpen] = useState<NativeFile | null>(null),
+    [create, setCreate] = useState(false),
+    [title, setTitle] = useState(""),
+    [permissions, setPermissions] = useState({ mail: false, calendar: false }),
+    [showLegacy, setShowLegacy] = useState(false);
+  const [template, setTemplate] = useState("blank");
+  const upload = useRef<HTMLInputElement>(null);
+  const reload = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    const results = await Promise.allSettled([
+      suiteApi<WorkspaceData>("/api/workspace"),
+      suiteApi<{ files: NativeFile[]; configured: boolean }>(
+        "/api/office/files",
+      ),
+    ]);
+    if (results[0].status === "fulfilled") setWorkspace(results[0].value);
+    else setError(results[0].reason.message);
+    if (results[1].status === "fulfilled") {
+      setFiles(results[1].value.files);
+      setConfigured(results[1].value.configured);
+    } else setError(results[1].reason.message);
+    setLoading(false);
+  }, []);
+  // Initialize browser location and load the external workspace after hydration.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search),
+      selected = p.get("app");
+    if (apps.some((a) => a.id === selected && a.id !== "ai"))
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActive(selected!);
+    if (p.get("settings") === "1") setSettings(true);
+    if (p.get("connection_error")) setError(p.get("connection_error")!);
+    void reload().then(() => {
+      if (p.get("connection_error")) setError(p.get("connection_error")!);
+    });
+  }, [reload]);
+  function select(id: string) {
+    if (open) return;
+    setActive(id);
+    setShowLegacy(false);
+    window.history.replaceState(null, "", `/?app=${id}`);
   }
-  function confirmGuestRestore(){
-    if(!guestRestore)return;try{setData(restoreGuestBackup(window.localStorage,guestRestore));setError("");setGuestRestore(null);notify("Guest backup restored in this browser. Existing work was kept.");}catch(e){setGuestRestore(null);notify((e as Error).message);}
+  async function newFile(
+    sourceFileId?: string,
+    legacyKind?: "document" | "sheet" | "slides",
+    legacyTitle?: string,
+  ) {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const name = legacyTitle ?? title.trim(),
+        kind = (legacyKind ?? active) as FileKind;
+      const source = sourceFileId
+        ? await suiteApi<{ file: { content: string } }>(
+            `/api/files?id=${encodeURIComponent(sourceFileId)}`,
+          )
+        : null;
+      const native = await prepareOfficeFile({
+        type: "create",
+        kind,
+        title: name,
+        template,
+        content: source
+          ? (JSON.parse(source.file.content) as FileContent)
+          : undefined,
+      });
+      const form = new FormData();
+      form.set("file", native);
+      form.set("title", name);
+      if (sourceFileId) form.set("sourceFileId", sourceFileId);
+      const r = await suiteApi<{ file: NativeFile }>(
+        "/api/office/files",
+        "POST",
+        form,
+      );
+      setCreate(false);
+      setOpen(r.file);
+      await reload();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
-  function setDemoMode(value:boolean){demoRef.current=value;setDemo(value);}
-  const notify=(message:string)=>{setToast(message);};
-  const reload=useCallback(async()=>{try{if(guest){const d=guestWorkspace(readGuestData(window.localStorage));setData(d);setError("");return d;}const d=await api("/api/workspace");if(!demoRef.current){setData(d);setError("");}return d as Workspace;}catch(e){setError((e as Error).message);return null;}},[guest]);
-  useEffect(()=>{if(!guest)return;const sync=(event:StorageEvent)=>{if(event.key===GUEST_STORAGE_KEY)void reload();};window.addEventListener("storage",sync);return()=>window.removeEventListener("storage",sync);},[guest,reload]);
-  useEffect(()=>{void reload().finally(()=>setLoading(false));const p=new URLSearchParams(location.search);const requested=p.get("view");if(requested&&Object.hasOwn(names,requested)&&(guest||!["code","web"].includes(requested)))setView(requested as View);if(p.get("connection_error"))setToast(p.get("connection_error")!);else if(p.get("connected"))setToast("Gmail account connected. Refresh its 25 newest emails from Accounts.");if(p.toString())history.replaceState(null,"",location.pathname);},[reload]);
-  useEffect(()=>{if(!toast)return;const id=setTimeout(()=>setToast(""),7000);return()=>clearTimeout(id);},[toast]);
-  const signature=editingFile?JSON.stringify([editingFile.title,editingFile.taskId,editingFile.mailId,fileContent]):"";
-  const dirty=!!editingFile&&signature!==savedSignature;
-  useEffect(()=>{if(!dirty)return;const handler=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue="";};window.addEventListener("beforeunload",handler);return()=>window.removeEventListener("beforeunload",handler);},[dirty]);
-  useEffect(()=>{if(view!=="inbox")return;let cancelled=false;const controller=new AbortController();setMailLoading(true);setMailError("");const timeout=setTimeout(async()=>{try{if(demo){const rows=(guest?[]:demoMail()).filter(m=>(account==="all"||m.accountId===account)&&`${m.subject} ${m.body} ${m.sender}`.toLowerCase().includes(search.toLowerCase()));if(!cancelled){setEmails(rows);setMailTotal(rows.length);}}else{const params=new URLSearchParams({page:String(mailPage),q:search});if(account!=="all")params.set("account",account);const response=await fetch(`/api/mail?${params}`,{signal:controller.signal,cache:"no-store"});const result:any=await response.json();if(!response.ok)throw Error(result.error??"Could not load mail.");if(!cancelled){setEmails(result.mail);setMailTotal(result.total);}}}catch(e){if(!cancelled)setMailError((e as Error).message);}finally{if(!cancelled)setMailLoading(false);}},250);return()=>{cancelled=true;controller.abort();clearTimeout(timeout);};},[view,account,search,mailPage,demo,guest,data.mailCount]);
-  const scopedTasks=data.tasks.filter(t=>(account==="all"||t.accountId===account)&&`${t.title} ${t.notes} ${t.category}`.toLowerCase().includes(search.toLowerCase()));
-  const waking=(t:Task)=>t.status==="snoozed"&&!!t.snoozedUntil&&t.snoozedUntil<=today();
-  const pending=scopedTasks.filter(t=>t.status==="pending"||waking(t)),review=scopedTasks.filter(t=>t.status==="review"||t.sourceChanged),overdue=pending.filter(t=>!!t.due&&t.due<today());
-  const visibleTasks=scopedTasks.filter(t=>taskFilter==="active"?["pending","review","waiting"].includes(t.status)||waking(t):taskFilter==="overdue"?overdue.includes(t):taskFilter==="review"?review.includes(t):taskFilter==="pending"?t.status==="pending"||waking(t):taskFilter==="all"?true:t.status===taskFilter).sort((a,b)=>(a.due??"9999").localeCompare(b.due??"9999"));
-  const scopedFiles=data.files.filter(f=>`${f.title}`.toLowerCase().includes(search.toLowerCase()));
-  const accountFor=(id:string|null)=>data.accounts.find(a=>a.id===id);
-  function navigate(v:View){setOfficeError("");setView(v);setMobile(false);setSearch("");setMailPage(0);}
-  async function connect(accountId?:string){if(guest){setView("accounts");notify("Sign in with email to connect Gmail. Your guest work stays in this browser.");return;}if(demo){notify("Exit sample mode to connect a real Gmail account.");return;}if(!data.configured){setView("accounts");notify("Google OAuth setup is required before connecting your accounts.");return;}setBusy(true);try{const r=await api("/api/gmail/connect","POST",accountId?{accountId}:{});location.assign(r.url);}catch(e){notify((e as Error).message);}finally{setBusy(false);}}
-  async function runSync(ids?:string[]){if(demo){notify("Sample mode does not connect to or scan Gmail.");return;}stopSync.current=false;const list=data.accounts.filter(a=>!ids||ids.includes(a.id));if(!list.length){await connect();return;}setSyncing("Starting");try{for(const a of list){if(stopSync.current)break;setSyncing(a.email);const r=await api("/api/gmail/sync","POST",{accountId:a.id});setSyncProgress(`${a.email} · ${r.processed} recent emails refreshed`);await reload();}}catch(e){notify((e as Error).message);await reload();}finally{setSyncing("");setSyncProgress("");}}
-  async function changeStatus(t:Task,status:TaskStatus){setBusy(true);try{if(guest){const current=readGuestData(window.localStorage).tasks.find(x=>x.id===t.id);if(!current)throw Error("This guest task is no longer saved. Refresh the page.");setData(saveGuestTask(window.localStorage,{...current,status,sourceChanged:0,snoozedUntil:status==="snoozed"?current.snoozedUntil:null,updatedAt:new Date().toISOString()}));}else if(demo)setData(d=>({...d,tasks:d.tasks.map(x=>x.id===t.id?{...x,status,sourceChanged:0}:x)}));else{await api("/api/tasks","PATCH",{...t,status,snoozedUntil:status==="snoozed"?t.snoozedUntil:null});await reload();}setSelectedTask(null);notify(status==="done"?"Task marked complete.":"Task updated.");}catch(e){notify((e as Error).message);}finally{setBusy(false);}}
-  function editTask(t?:Task,source?:Email){setTaskForm(t?{...taskDefaults,...t}:{...taskDefaults,title:source?.subject??"",sourceId:source?.id??null});setSelectedTask(null);}
-  async function saveTask(e:React.FormEvent){e.preventDefault();if(!taskForm)return;setBusy(true);try{if(guest){const timestamp=new Date().toISOString(),existing=readGuestData(window.localStorage).tasks.find(t=>t.id===taskForm.id);const row={...taskForm,id:taskForm.id??crypto.randomUUID(),accountId:null,threadId:null,sourceId:null,evidence:"",reason:"Created in your guest workspace.",sourceChanged:0,createdAt:existing?.createdAt??timestamp,updatedAt:timestamp} as Task;setData(saveGuestTask(window.localStorage,row));}else if(demo){const timestamp=new Date().toISOString();const row={accountId:null,threadId:null,evidence:"",reason:"Created in sample mode.",sourceChanged:0,createdAt:timestamp,updatedAt:timestamp,...taskForm,id:taskForm.id??crypto.randomUUID()} as Task;setData(d=>({...d,tasks:taskForm.id?d.tasks.map(t=>t.id===row.id?{...t,...row}:t):[row,...d.tasks]}));}else{await api("/api/tasks",taskForm.id?"PATCH":"POST",taskForm);await reload();}setTaskForm(null);notify("Task saved.");}catch(e){notify((e as Error).message);}finally{setBusy(false);}}
-  function openFile(f:WorkspaceFile){const c=JSON.parse(f.content) as FileContent;if(f.kind==="document")c.html=cleanHtml(c.html??"");setEditingFile({...f});setFileContent(c);setSavedSignature(JSON.stringify([f.title,f.taskId,f.mailId,c]));}
-  function newFile(kind:FileKind,task?:Task,email?:Email){const timestamp=new Date().toISOString();const content:FileContent=kind==="document"?{html:task?`<h1>${escapeHtml(task.title)}</h1><p>${escapeHtml(task.notes||task.evidence)}</p>`:email?`<h1>${escapeHtml(email.subject)}</h1><p>${escapeHtml(email.body).replace(/\n/g,"<br>")}</p>`:""}:kind==="slides"?{slides:[{title:task?.title??email?.subject??"Your next big idea",body:"Add a little context here.",notes:"",color:"#1d5145"}]}:{cells:{},rows:24,cols:12};openFile({id:`draft:${crypto.randomUUID()}`,title:task?.title??email?.subject??`Untitled ${kind==="slides"?"presentation":kind==="sheet"?"spreadsheet":"document"}`,kind,content:JSON.stringify(content),taskId:task?.id??null,mailId:email?.id??null,revision:0,createdAt:timestamp,updatedAt:timestamp});}
-  async function readLocalOffice(file:File,kind:FileKind){
-    setBusy(true);setOfficeError("");try{const {readOfficeFile}=await import("@/lib/office-import");const result=await readOfficeFile(file,kind);if(kind==="document")result.content.html=cleanHtml(result.content.html??"");setOfficeImport(result);}catch(e){setOfficeError(e instanceof Error?e.message:"This file could not be opened. Choose another file.");}finally{setBusy(false);}
+  async function importFile(file: File) {
+    setBusy(true);
+    setError("");
+    try {
+      if (file.size > 3_000_000)
+        throw Error("Choose an Office file smaller than 3 MB.");
+      const form = new FormData();
+      form.set(
+        "file",
+        await prepareOfficeFile({
+          type: "import",
+          name: file.name,
+          buffer: await file.arrayBuffer(),
+        }),
+      );
+      const result = await suiteApi<{ file: NativeFile }>(
+        "/api/office/files",
+        "POST",
+        form,
+      );
+      setOpen(result.file);
+      await reload();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
-  function openOfficeCopy(){if(!officeImport)return;const timestamp=new Date().toISOString();openFile({id:`draft:${crypto.randomUUID()}`,title:officeImport.title,kind:officeImport.kind,content:JSON.stringify(officeImport.content),taskId:null,mailId:null,revision:0,createdAt:timestamp,updatedAt:timestamp});setSavedSignature("");setOfficeImport(null);}
-  async function saveFile(){if(!editingFile)return;setBusy(true);try{const p={...editingFile,content:JSON.stringify(fileContent)};let f:WorkspaceFile;if(guest){const saved=saveGuestFile(window.localStorage,p);f=saved.file;setData(saved.workspace);}else if(demo){f={...p,id:p.id.startsWith("draft:")?crypto.randomUUID():p.id,revision:p.revision+1,updatedAt:new Date().toISOString()};setData(d=>({...d,files:[f,...d.files.filter(x=>x.id!==f.id)]}));}else{const r=await api("/api/files",editingFile.id.startsWith("draft:")?"POST":"PATCH",p);f=r.file;await reload();}setEditingFile(current=>mergeSavedFile(current,editingFile.id,f));setSavedSignature(JSON.stringify([f.title,f.taskId,f.mailId,JSON.parse(f.content)]));notify(guest?"Saved in this browser.":demo?"Saved in this sample session only.":"File saved to your private workspace.");}catch(e){notify((e as Error).message);}finally{setBusy(false);}}
-  function closeFile(){if(busy)return;if(dirty&&!confirm("This file has unsaved changes. Close without saving?"))return;setEditingFile(null);}
-  async function removeFile(f:WorkspaceFile){if(!confirm(`Delete “${f.title}”? This removes the saved file from your workspace.`))return;setBusy(true);try{if(guest)setData(removeGuestFile(window.localStorage,f.id));else if(demo)setData(d=>({...d,files:d.files.filter(x=>x.id!==f.id)}));else{await api("/api/files","DELETE",{id:f.id});await reload();}notify("File deleted.");}catch(e){notify((e as Error).message);}finally{setBusy(false);}}
-  async function exportCurrent(){if(!editingFile)return;setBusy(true);try{await exportFile(editingFile,fileContent);notify("Export downloaded.");}catch(e){notify("Export could not finish: "+(e instanceof Error?e.message:"Please try again."));}finally{setBusy(false);}}
-  async function sourceEmail(id:string){try{if(demo){const email=demoMail().find(m=>m.id===id);if(email)setSelectedMail(email);}else{const r=await api(`/api/mail?id=${encodeURIComponent(id)}`);if(r.mail[0])setSelectedMail(r.mail[0]);else notify("The source email is outside the current 25-email view or no longer available. Open its Gmail thread if available.");}}catch(e){notify((e as Error).message);}}
-  async function openPdfAttachment(email:Email,index:number,name:string){if(demo){notify("Sample emails do not contain real attachments. Open a PDF from your device instead.");return;}setPdfAttachmentLoading(true);try{const response=await fetch("/api/gmail/pdf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mailId:email.id,index}),cache:"no-store"});if(!response.ok){const data:any=await response.json();throw Error(data.error??"Could not open this PDF attachment.");}const blob=await response.blob();setPdfSource({blob,name,origin:"gmail"});setSelectedMail(null);navigate("pdf");}catch(e){notify((e as Error).message);}finally{setPdfAttachmentLoading(false);}}
-  function taskRow(t:Task){const a=accountFor(t.accountId),past=!!t.due&&t.due<today();return <button key={t.id} className="task-row" onClick={()=>setSelectedTask(t)}><span className={`task-check ${t.status==="done"?"checked":""}`}>{t.status==="done"&&<Check size={12}/>}</span><span className="task-row-main"><strong>{t.title}</strong><small>{a?.email??"Personal task"}<span>·</span>{t.category==="application"?"Application":t.category==="work"?"Work":t.category==="personal"?"Personal":"General"}</small></span>{t.sourceChanged>0&&<span className="tag amber">Source changed</span>}<span className={`tag status-${t.status}`}>{statusNames[t.status]}</span><span className={`task-due ${past?"past":""}`}><CalendarDays size={13}/>{dateLabel(t.due)}</span><ChevronRight size={16} className="muted"/></button>;}
-  const greeting=data.userName.includes("@")?"":data.userName.split(" ")[0];
-  return <div className="app-shell">
-    <aside className={`sidebar ${mobile?"show":""}`}><a className="brand" href="#" onClick={e=>{e.preventDefault();navigate("overview");}}><span className="brand-mark"><Layers size={22}/></span>maildesk<span className="brand-dot">.</span></a><div className="workspace-chip"><span className="avatar">{greeting?.[0]??"H"}</span><div><strong>{guest?"Guest workspace":"My workspace"}</strong><small>{guest?"This browser only":"Personal · Private"}</small></div><ShieldCheck size={15}/></div><p className="nav-label">WORKSPACE</p><nav>{([["overview",LayoutDashboard,"Overview"],["inbox",Inbox,"All mail"],["tasks",CheckCheck,"Tasks"]] as const).map(([v,Icon,label])=><button key={v} className={`nav-item ${view===v?"active":""}`} onClick={()=>navigate(guest&&v==="inbox"?"accounts":v)}><Icon size={18}/>{label}{v==="tasks"&&review.length>0&&<span className="nav-count">{review.length}</span>}{v==="inbox"&&data.mailCount>0&&<span className="nav-small">{data.mailCount.toLocaleString()}</span>}</button>)}<a className="nav-item" href={guest?"/auth/sign-in?return_to=%2Fai-studio":"/ai-studio"}><Sparkles size={18}/>AI Studio<span className="nav-small">{guest?"Sign in":"Free"}</span></a><a className="nav-item" href={guest?"/auth/sign-in?return_to=%2Fconversations":"/conversations"}><MessagesSquare size={18}/>Calls & messages</a></nav>{guest?<button className={`nav-item ${view==="web"?"active":""}`} onClick={()=>navigate("web")}><Globe size={18}/>Web search</button>:<a className="nav-item" href="/web"><Globe size={18}/>Web search</a>}<p className="nav-label">CREATE & ORGANIZE</p><nav>{([["document",FileText,"Documents"],["slides",Presentation,"Presentations"],["sheet",Table2,"Spreadsheets"],["pdf",FileText,"PDF viewer"]] as const).map(([v,Icon,label])=><button key={v} className={`nav-item ${view===v?"active":""}`} onClick={()=>navigate(v)}><Icon size={18}/>{label}</button>)}{guest?<button className={`nav-item ${view==="code"?"active":""}`} onClick={()=>navigate("code")}><Code2 size={18}/>Code editor</button>:<a className="nav-item" href="/code"><Code2 size={18}/>Code editor</a>}</nav><div className="sidebar-bottom"><div className="sidebar-note"><span className="little-spark">✦</span><strong>Less scattered.<br/>More together.</strong><p>Your email, tasks and ideas.<br/>One quiet place.</p></div><button className={`nav-item ${view==="accounts"?"active":""}`} onClick={()=>navigate("accounts")}><Settings size={18}/>Accounts & settings</button><div className="privacy-note"><span/>Email AI is off</div></div></aside>
-    {mobile&&<button className="mobile-backdrop" aria-label="Close navigation" onClick={()=>setMobile(false)}/>}
-    <div className="main-shell"><header className="topbar"><div className="breadcrumb"><button className="mobile-menu" aria-label="Open navigation" onClick={()=>setMobile(true)}><Menu size={20}/></button><span>{guest?"Guest workspace":"My workspace"}</span><ChevronRight size={13}/><strong>{names[view]}</strong></div><div className="topbar-actions"><span className="private-pill"><ShieldCheck size={13}/>{guest?"Saved in this browser":"Private workspace"}</span><a className="top-avatar" href={guest?"/auth/sign-in":"/auth/sign-out"} aria-label={guest?"Sign in":"Sign out"} title={guest?"Sign in":"Sign out"}>{greeting?.[0]??"H"}</a></div></header>
-    {guest&&<div className="demo-banner"><span><Briefcase size={15}/>Guest mode · work stays in this browser · export before clearing browser data</span><a href="/auth/sign-in" className="text-button">Sign in<ArrowRight size={13}/></a></div>}
-    {demo&&!guest&&<div className="demo-banner"><span><Briefcase size={15}/>Sample workspace · fictional emails · changes last only for this session</span><button onClick={()=>{if(syncing)return;setDemoMode(false);setData(blank);setAccount("all");setSelectedMail(null);setSelectedTask(null);setSearch("");setMailPage(0);void reload();}}>Exit sample <X size={13}/></button></div>}
-    {error&&<div className="error-banner" role="alert"><AlertCircle size={17}/><span>{error}</span><a href="/signin-with-chatgpt?return_to=%2F" target="_top">Sign in</a><button onClick={()=>void reload()}>Retry</button></div>}
-    <main className="main-content"><div className="page-heading"><div><p className="eyebrow">{view==="overview"?new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",timeZone:"Asia/Kolkata"}):view==="accounts"?"YOUR PRIVATE WORKSPACE":"EVERYTHING, CONNECTED"}</p><h1>{view==="overview"?"Your day, in focus.":view==="inbox"?"One place. Every inbox.":view==="tasks"?"Make room for what’s next.":view==="document"?"Put your thoughts to work.":view==="slides"?"Give your ideas a stage.":view==="sheet"?"A little order in the numbers.":view==="pdf"?"Every page, a little clearer.":view==="code"?"A little space to build.":view==="web"?"A little window to the web.":"Connected, on your terms."}</h1><p className="page-subtitle">{view==="overview"?`${greeting?`Hello, ${greeting}. `:""}A clear view of what needs your attention.`:view==="inbox"?"Read the 25 newest emails per account, then turn them into action.":view==="tasks"?"Review suggestions, set your priorities, and keep the source close.":view==="accounts"?(guest?"Your guest work stays on this browser. Anyone using it can open this guest workspace.":"Up to ten Gmail accounts · 25 recent emails each · manual refresh · read-only access."):view==="pdf"?"Open a PDF from your device. Read, search, and explore it privately.":"Create, save, and link your work to the email or task behind it."}</p></div><div className="heading-actions">{view==="pdf"||["code","web"].includes(view)?null:["document","slides","sheet"].includes(view)?<><button className="button" disabled={busy} onClick={()=>officeInput.current?.click()}><Upload size={16}/>{busy?"Opening…":"Open file"}</button><input ref={officeInput} type="file" hidden aria-label="Open Office file" accept={officeAccept[view as FileKind]} onChange={e=>{const file=e.target.files?.[0];e.target.value="";if(file)void readLocalOffice(file,view as FileKind);}}/><button className="button primary" disabled={busy} onClick={()=>newFile(view as FileKind)}><Plus size={16}/>New {view==="slides"?"presentation":view==="sheet"?"spreadsheet":"document"}</button></>:view==="accounts"&&guest?<a className="button primary" href="/auth/sign-in">Sign in<ArrowRight size={16}/></a>:view==="accounts"?<button className="button primary" disabled={busy||data.accounts.length>=10} onClick={()=>void connect()}><Plus size={16}/>Connect Gmail</button>:<><button className="button" style={guest?{display:"none"}:undefined} disabled={!!syncing||busy||loading} onClick={()=>void runSync()}><RefreshCw size={15} className={syncing?"spinning":""}/>{syncing?"Syncing…":"Refresh mail"}</button><button className="button primary" onClick={()=>editTask()}><Plus size={16}/>New task</button></>}</div></div>
-    {syncing&&<div className="sync-bar"><RefreshCw size={15} className="spinning"/><span>{syncProgress||`Checking ${syncing}…`} · keep this tab open</span><button onClick={()=>{stopSync.current=true;notify("Refresh will stop after the current account.");}}><Pause size={13}/>Stop</button></div>}
-    {officeError&&<div className="warning-note" role="alert">{officeError}<button className="text-button" aria-label="Dismiss file error" onClick={()=>setOfficeError("")}><X size={14}/></button></div>}
-    {((data as Workspace & {taskCount?:number}).taskCount??0)>data.tasks.length&&<div className="warning-note">Showing the latest {data.tasks.length.toLocaleString()} of {(data as Workspace & {taskCount:number}).taskCount.toLocaleString()} tasks. Counts and backups refer to this loaded set.</div>}{data.files.length===500&&<div className="warning-note">Showing up to 500 recent files.</div>}{loading?<div className="loading-grid">{[1,2,3,4].map(i=><div className="skeleton" key={i}/>)}<p>Opening your workspace…</p></div>:<>
-    {view==="overview"&&<><div className="stat-grid"><button className="stat-card" onClick={()=>{setTaskFilter("pending");navigate("tasks");}}><span><CheckCheck size={17}/>Pending tasks</span><strong>{pending.length}<small>to move forward</small></strong><div className="stat-foot"><span className="dot green"/>Confirmed by you<ArrowUpRight size={15}/></div></button><button className="stat-card" onClick={()=>{setTaskFilter("review");navigate("tasks");}}><span><Search size={17}/>Needs your review</span><strong>{review.length}<small>{guest?"tasks to check":"email suggestions"}</small></strong><div className="stat-foot"><span className="dot amber"/>Check before acting<ArrowUpRight size={15}/></div></button><button className="stat-card" onClick={()=>{setTaskFilter("overdue");navigate("tasks");}}><span><Clock size={17}/>Past due</span><strong>{overdue.length}<small>need attention</small></strong><div className="stat-foot"><span className="dot coral"/>Based on confirmed dates<ArrowUpRight size={15}/></div></button><button className="stat-card" onClick={()=>navigate(guest?"document":"accounts")}><span><Inbox size={17}/>{guest?"Saved files":"Connected inboxes"}</span><strong>{guest?data.files.length:data.accounts.length}<small>{guest?"in this browser":"of 10 accounts"}</small></strong><div className="stat-foot"><span className="dot green"/>{guest?"Documents, slides & sheets":`${data.mailCount.toLocaleString()} emails synced`}<ArrowUpRight size={15}/></div></button></div>
-    <div className="overview-grid"><section className="panel focus-panel"><div className="panel-heading"><div><h2>Your next moves <span className="tiny-count">{pending.length+review.length}</span></h2><p>A few things worth your attention.</p></div><button className="text-button" onClick={()=>{setTaskFilter("active");navigate("tasks");}}>View all <ArrowRight size={14}/></button></div>{pending.length+review.length? [...new Map([...overdue,...pending,...review].map(t=>[t.id,t])).values()].slice(0,5).map(taskRow):<Empty icon={CheckCheck} title="A clear desk. A fresh start." text={guest?"Add a task, set a date, and keep your next step close.":"Connect a Gmail account to find likely tasks, or add your first task yourself."} action={<button className="button small" onClick={()=>guest?editTask():void connect()}>{guest?"Add your first task":"Connect your first inbox"} <ArrowRight size={14}/></button>}/>}<div className="panel-bottom"><ShieldCheck size={13}/>Suggestions stay in review until you confirm them.</div></section><aside className="quick-panel"><span className="eyebrow">A LITTLE SPACE TO CREATE</span><h2>From an idea<br/>to something useful.</h2><p>Write it down. Present it clearly.<br/>Work through the numbers.</p>{([["document",FileText,"A new document","For thoughts, notes & plans"],["slides",Presentation,"A new presentation","For ideas worth sharing"],["sheet",Table2,"A new spreadsheet","For a clearer picture"]] as const).map(([kind,Icon,title,sub])=><button key={kind} className="quick-create" onClick={()=>newFile(kind)}><span className={`file-icon ${kind}`}><Icon size={19}/></span><span><strong>{title}</strong><small>{sub}</small></span><Plus size={16}/></button>)}</aside></div>
-    <div className="overview-lower"><section className="panel"><div className="panel-heading"><div><h2>Pick up where you left off</h2><p>Your recent documents, slides and spreadsheets.</p></div></div><div className="recent-files">{data.files.length?data.files.slice(0,3).map(f=>{const Icon=kindIcons[f.kind];return <button key={f.id} className="recent-file" onClick={()=>openFile(f)}><span className={`file-icon ${f.kind}`}><Icon size={23}/></span><strong>{f.title}</strong><small>{f.taskId?"Linked to a task":"Personal file"} · {timestamp(f.updatedAt)}</small><ArrowUpRight size={15}/></button>;}):<div className="recent-empty"><FileText size={20}/><span>Your first file starts with an idea. Use a create button above.</span></div>}</div></section><div className="gentle-note"><div className="orbit-art"><span/><span/><span/><Mail size={26}/></div><div><h3>Every thread has a place.</h3><p>Keep the original email one click away.<br/>A little context goes a long way.</p>{!demo&&<button className="text-button" onClick={()=>{setData(demoWorkspace());setDemoMode(true);setError("");}}>Explore a sample workspace <ArrowRight size={14}/></button>}</div></div></div></>}
-    {(view==="tasks"||view==="inbox")&&<><div className="filter-toolbar"><div className="search-field"><Search size={17}/><input aria-label={view==="inbox"?"Search synced mail":"Search tasks"} placeholder={view==="inbox"?"Search synced email…":"Search tasks…"} value={search} onChange={e=>{setSearch(e.target.value);setMailPage(0);}}/></div><select aria-label="Filter by Gmail account" value={account} onChange={e=>{setAccount(e.target.value);setMailPage(0);}}><option value="all">All accounts</option>{data.accounts.map(a=><option key={a.id} value={a.id}>{a.email}</option>)}</select>{view==="tasks"&&<select aria-label="Filter task status" value={taskFilter} onChange={e=>setTaskFilter(e.target.value)}>{[["active","Active tasks"],["review","Needs review"],["pending","Pending"],["waiting","Waiting"],["overdue","Past due"],["snoozed","Snoozed"],["done","Completed"],["dismissed","Dismissed"],["all","All tasks"]].map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>}</div>
-    {view==="tasks"?<section className="panel"><div className="list-caption"><span>{visibleTasks.length} tasks</span><span>Dates shown in India time · expired suggestions still need review</span></div>{visibleTasks.length?visibleTasks.map(taskRow):<Empty icon={CheckCheck} title="Nothing on this list yet." text="Change your filters, add a task, or connect Gmail to discover likely actions." action={<button className="button small" onClick={()=>editTask()}>Add a task</button>}/>}</section>:<section className="panel"><div className="list-caption"><span>{mailTotal.toLocaleString()} synced emails</span><span>{data.accounts.some(a=>a.phase!=="ready")?"Mailbox scan in progress · results are partial":"Local synced copy · refresh for new mail"}</span></div>{mailError?<div className="inline-error">{mailError}</div>:mailLoading?<div className="loading-line">Loading mail…</div>:emails.length?emails.map(m=><button className="mail-row" key={m.id} onClick={()=>setSelectedMail(m)}><span className="sender-avatar">{m.sender[0]?.toUpperCase()??"M"}</span><span className="mail-row-main"><strong>{m.subject}</strong><span>{m.sender}</span><p>{m.snippet}</p></span><span className="mail-row-date"><small>{accountFor(m.accountId)?.email}</small>{timestamp(m.receivedAt)}</span><ChevronRight size={15}/></button>):<Empty title="Your inboxes, together." text="Connect Gmail and start a scan. Messages will appear here as each batch finishes." action={<button className="button small" onClick={()=>navigate("accounts")}>Manage accounts <ArrowRight size={14}/></button>}/>}<div className="pagination"><button disabled={mailPage===0||mailLoading} onClick={()=>setMailPage(mailPage-1)}><ChevronLeft size={15}/>Previous</button><span>Page {mailPage+1} · 50 emails per page</span><button disabled={(mailPage+1)*50>=mailTotal||mailLoading} onClick={()=>setMailPage(mailPage+1)}>Next<ChevronRight size={15}/></button></div></section>}</>}
-    {(["document","slides","sheet"] as string[]).includes(view)&&<><div className="filter-toolbar"><div className="search-field"><Search size={17}/><input placeholder="Find a file…" aria-label="Search files" value={search} onChange={e=>setSearch(e.target.value)}/></div><span className="muted">{guest?"Saved in this browser · linked to your tasks":"Saved privately · linked to your work"}</span></div><div className="file-grid"><button className="new-file-card" onClick={()=>newFile(view as FileKind)}><Plus size={30} strokeWidth={1}/><strong>Create something new</strong><span>A fresh page for your next idea</span></button>{scopedFiles.filter(f=>f.kind===view).map(f=>{const Icon=kindIcons[f.kind];return <article key={f.id} className="file-card"><button className={`file-cover ${f.kind}`} onClick={()=>openFile(f)}>{f.kind==="document"?<div className="mini-paper"><div/><div/><div/><div/><div/></div>:f.kind==="slides"?<div className="mini-slide"><span>YOUR IDEAS,<br/>CLEARLY.</span><i/></div>:<div className="mini-sheet">{Array.from({length:24},(_,i)=><i key={i}/>)}</div>}<span className="file-cover-icon"><Icon size={20}/></span></button><div className="file-info"><button onClick={()=>openFile(f)}><strong>{f.title}</strong></button><small>{timestamp(f.updatedAt)}</small><div className="file-card-bottom"><span>{f.taskId?<><Link2 size={12}/>Linked task</>:"Personal file"}</span><button aria-label={`Delete ${f.title}`} disabled={busy} onClick={()=>void removeFile(f)}><Trash2 size={14}/></button></div></div></article>;})}</div></>}
-    {guest&&view==="code"&&<GuestCode guest/>}
-    {guest&&view==="web"&&<GuestWeb guest/>}
-    {guest&&view==="accounts"&&<section className="panel"><div className="panel-heading"><div><h2>Your guest workspace</h2><p>Tasks, files, code projects, and bookmarks are saved on this browser. They do not sync across devices.</p></div></div><div style={{padding:24}}><p>Sign in with email for connected inboxes, AI Studio, or invited conversation rooms. Signing in does not automatically copy your guest work.</p><div className="heading-actions" style={{marginTop:18}}><a className="button primary" href="/auth/sign-in">Sign in<ArrowRight size={14}/></a><button className="button" onClick={()=>{try{download(new Blob([window.localStorage.getItem(GUEST_STORAGE_KEY)??JSON.stringify(emptyGuestData())],{type:"application/json"}),"maildesk-guest-backup.json");}catch{notify("Browser storage is blocked. Export each open file before closing it.");}}}><Download size={14}/>Export guest backup</button><button className="button" disabled={busy} onClick={()=>guestImportInput.current?.click()}>Restore guest backup</button><input ref={guestImportInput} type="file" accept=".json,application/json" aria-label="Guest backup file" hidden onChange={e=>{const file=e.target.files?.[0];e.target.value="";if(file)void readGuestBackup(file);}}/></div><p className="fine-print" style={{marginTop:14}}>Restore a guest backup here to use it in another browser. You can review it before importing; existing work is kept.</p></div></section>}
-    {view==="pdf"&&<PdfViewer source={pdfSource} onSource={setPdfSource}/>}
-    {view==="accounts"&&!guest&&<><div className="settings-grid"><section className="panel"><div className="panel-heading"><div><h2>Your Gmail accounts <span className="tiny-count">{data.accounts.length} / 10</span></h2><p>Each account requires its own Google consent. Only its 25 newest emails are refreshed; older confirmed tasks are kept.</p></div><ShieldCheck size={20} className="green-text"/></div>{data.accounts.map(a=><div key={a.id} className="account-row"><div className="account-avatar"><Mail size={20}/></div><div className="account-info"><strong>{a.email}</strong><small>{Math.min(a.scanned,25).toLocaleString()} / 25 recent emails cached</small><small>Last refresh: {timestamp(a.syncedAt)}</small>{a.error&&<p className="account-error">{a.error}</p>}</div><div className="account-actions"><button className="button small" disabled={!!syncing} onClick={()=>void runSync([a.id])}><RefreshCw size={13}/>Refresh latest 25</button><button className="button small" disabled={busy||!!syncing} onClick={()=>void connect(a.id)}>Reconnect</button><button className="text-button danger" disabled={busy||!!syncing} onClick={async()=>{if(demo){notify("Sample accounts cannot be disconnected. Exit sample mode instead.");return;}if(!confirm(`Disconnect ${a.email}? Its cached emails and email-derived tasks will be deleted. Your documents are kept and unlinked.`))return;setBusy(true);try{const r=await api("/api/gmail/disconnect","POST",{accountId:a.id});setAccount("all");await reload();notify(r.message);}catch(e){notify((e as Error).message);}finally{setBusy(false);}}}>Disconnect</button></div></div>)}{!data.accounts.length&&<Empty icon={Mail} title="Bring your inboxes together." text="Connect up to ten accounts. Maildesk reads email without sending, deleting, or marking messages as read." action={<button className="button primary" disabled={busy} onClick={()=>void connect()}><Plus size={15}/>Connect Gmail</button>}/>}<div className="panel-bottom"><Clock size={14}/>Refresh fetches up to 25 newest emails once per account. Wait at least one minute before refreshing that account again.</div></section><aside className="panel privacy-panel"><span className="privacy-shield"><ShieldCheck size={25}/></span><h2>Your email stays out<br/>of external AI.</h2><p>Task suggestions use rules, explicit dates, and email context. You make the final call.</p><ul><li><Check size={14}/>Read-only Gmail permission</li><li><Check size={14}/>Encrypted Google refresh tokens</li><li><Check size={14}/>Private server-side storage</li><li><Check size={14}/>Disconnect and remove cached mail</li></ul><p className="fine-print">Email content is stored on the application’s hosting service so you can search it and review tasks. PDF attachments are fetched only when opened and are not saved in the workspace. Email previews are capped at 40,000 characters.</p></aside></div><section className="panel setup-panel"><div className="panel-heading"><div><h2>Google connection setup</h2><p>{data.configured?"Configuration is present. Connect an account to verify live access.":"The workspace is ready for configuration. Gmail is not connected yet."}</p></div><span className={`tag ${data.configured?"status-pending":"amber"}`}>{data.configured?"Configured":"Setup needed"}</span></div><div className="setup-content"><ol><li>Create a Google Cloud project, enable Gmail API, and configure an OAuth consent screen.</li><li>Create a <strong>Web application</strong> OAuth client. Register the exact redirect address below.</li><li>Set <code>GOOGLE_CLIENT_ID</code> and <code>GOOGLE_CLIENT_SECRET</code> as private server settings. The app also needs <code>TOKEN_ENCRYPTION_KEY</code> and <code>APP_ORIGIN</code>.</li><li>For testing, add all ten Gmail addresses as test users, then connect each account individually. Google policies may require verification before wider use.</li></ol><div className="callback-field"><span>Google OAuth redirect address</span><code>{data.callbackUrl||"Available after hosting configuration"}</code><button className="button small" disabled={!data.callbackUrl} onClick={()=>void navigator.clipboard.writeText(data.callbackUrl).then(()=>notify("Redirect address copied."),()=>notify("Copy the redirect address manually from Settings."))}><Copy size={13}/>Copy</button></div><p className="fine-print">Read-only scopes can still require Google verification. Testing-mode refresh tokens may expire and require reconnection. Keep OAuth secrets out of chat, documents, and source code.</p></div></section><section className="panel setup-panel"><div className="panel-heading"><div><h2>Your workspace data</h2><p>Download a backup of the tasks and files loaded in this view. Gmail tokens and cached email bodies are excluded.</p></div><button className="button" onClick={()=>download(new Blob([JSON.stringify({exportedAt:new Date().toISOString(),tasks:data.tasks,files:data.files},null,2)],{type:"application/json"}),"maildesk-workspace-backup.json")}><Download size={15}/>Export backup</button></div></section></>}
-    </>}
-    <footer className="page-footer"><span><span className="footer-dot"/>A quieter place to get things done.</span><span>Maildesk · {guest?"Guest workspace":"Personal workspace"}</span></footer></main></div>
-    {toast&&<div className="toast" role="status"><span>{toast}</span><button aria-label="Dismiss notification" onClick={()=>setToast("")}><X size={15}/></button></div>}
-    {selectedTask&&<Modal notice={toast} onClose={()=>setSelectedTask(null)} label="Task details"><div className="modal-heading"><span className={`tag status-${selectedTask.status}`}>{statusNames[selectedTask.status]}</span><button className="icon-button" aria-label="Close task" onClick={()=>setSelectedTask(null)}><X size={20}/></button></div><h2 className="modal-title">{selectedTask.title}</h2><div className="detail-meta"><span><CalendarDays size={15}/>{dateLabel(selectedTask.due)}</span><span>{selectedTask.priority} priority</span><span>{selectedTask.category}</span></div>{selectedTask.due&&selectedTask.due<today()&&selectedTask.status==="review"&&<div className="warning-note">The detected date is in the past. Check whether this request is still actionable.</div>}<div className="evidence"><span className="eyebrow">WHY THIS IS HERE</span><blockquote>{selectedTask.evidence||"You created this task manually."}</blockquote><p>{selectedTask.reason}</p></div>{selectedTask.notes&&<p className="task-notes">{selectedTask.notes}</p>}<div className="source-links">{selectedTask.threadId&&accountFor(selectedTask.accountId)&&<a className="button small" href={gmailUrl(accountFor(selectedTask.accountId)!.email,selectedTask.threadId)} target="_blank" rel="noopener noreferrer"><Mail size={14}/>Open original email<ArrowUpRight size={13}/></a>}{selectedTask.sourceId&&<button className="button small" onClick={()=>void sourceEmail(selectedTask.sourceId!)}><Inbox size={14}/>Read email here</button>}{safeUrl(selectedTask.taskUrl)&&<a className="button small" href={safeUrl(selectedTask.taskUrl)!} target="_blank" rel="noopener noreferrer"><Link2 size={14}/>Open task link<ArrowUpRight size={13}/></a>}</div><div className="linked-files"><h3>Work linked to this task</h3>{data.files.filter(f=>f.taskId===selectedTask.id).map(f=><button className="linked-file" key={f.id} onClick={()=>openFile(f)}><FileText size={15}/>{f.title}<ArrowUpRight size={13}/></button>)}<div className="create-linked">{(["document","slides","sheet"] as const).map(k=>{const Icon=kindIcons[k];return <button className="button small" key={k} onClick={()=>newFile(k,selectedTask)}><Icon size={14}/>{k==="slides"?"Presentation":k==="sheet"?"Spreadsheet":"Document"}</button>;})}</div></div><div className="modal-footer"><button className="button" onClick={()=>editTask(selectedTask)}>Edit task</button><div><button className="button" disabled={busy} onClick={()=>void changeStatus(selectedTask,"dismissed")}>Dismiss</button><button className="button primary" disabled={busy} onClick={()=>void changeStatus(selectedTask,selectedTask.status==="review"?"pending":"done")}><Check size={15}/>{selectedTask.status==="review"?"Confirm pending":"Mark complete"}</button></div></div></Modal>}
-    {guestRestore&&<Modal label="Restore guest backup" notice={toast} onClose={()=>setGuestRestore(null)}><div className="modal-heading"><span className="eyebrow">YOUR SAVED WORK</span><button className="icon-button" aria-label="Close backup restore" onClick={()=>setGuestRestore(null)}><X size={20}/></button></div><h2 className="modal-title">Restore this guest backup?</h2><p>{guestRestore.counts.tasks} tasks, {guestRestore.counts.files} office files, and {guestRestore.counts.utilities} saved tool items will be added to this browser.</p><p>Existing work is kept. Changed items with matching IDs are added as separate copies, with their task links preserved.</p>{guestRestore.counts.skipped>0&&<p>{guestRestore.counts.skipped} identical items are already saved and will be skipped.</p>}<p className="fine-print">Connected accounts, emails, passwords, and sign-in sessions are never imported.</p><div className="heading-actions"><button className="button" onClick={()=>setGuestRestore(null)}>Cancel</button><button className="button primary" onClick={confirmGuestRestore}>Restore backup</button></div></Modal>}
-    {taskForm&&<Modal notice={toast} onClose={()=>!busy&&setTaskForm(null)} label="Edit task"><form onSubmit={saveTask}><fieldset disabled={busy} style={{display:"contents"}}><div className="modal-heading"><span className="eyebrow">A CLEAR NEXT STEP</span><button type="button" className="icon-button" aria-label="Close task form" onClick={()=>setTaskForm(null)}><X size={20}/></button></div><h2 className="modal-title">{taskForm.id?"Edit your task":"What needs doing?"}</h2><label className="form-field">Task title<input autoFocus required maxLength={200} value={taskForm.title} onChange={e=>setTaskForm({...taskForm,title:e.target.value})} placeholder="A small, specific next action"/></label><div className="form-grid"><label className="form-field">Status<select value={taskForm.status} onChange={e=>setTaskForm({...taskForm,status:e.target.value as TaskStatus})}>{Object.entries(statusNames).map(([k,v])=><option value={k} key={k}>{v}</option>)}</select></label><label className="form-field">Due date<input type="date" value={taskForm.due??""} onChange={e=>setTaskForm({...taskForm,due:e.target.value||null})}/></label><label className="form-field">Priority<select value={taskForm.priority} onChange={e=>setTaskForm({...taskForm,priority:e.target.value})}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label><label className="form-field">Category<select value={taskForm.category} onChange={e=>setTaskForm({...taskForm,category:e.target.value})}><option value="general">General</option><option value="work">Work</option><option value="application">Application</option><option value="personal">Personal</option></select></label></div>{taskForm.status==="snoozed"&&<label className="form-field">Snooze until<input type="date" required value={taskForm.snoozedUntil??""} onChange={e=>setTaskForm({...taskForm,snoozedUntil:e.target.value||null})}/></label>}<label className="form-field">Task or application link<input type="url" placeholder="https://…" value={taskForm.taskUrl??""} onChange={e=>setTaskForm({...taskForm,taskUrl:e.target.value||null})}/></label><label className="form-field">Notes<textarea value={taskForm.notes} onChange={e=>setTaskForm({...taskForm,notes:e.target.value})} placeholder="A little context for later…" rows={3}/></label><div className="modal-footer"><span className="muted">{guest?"Saved on this browser.":"Only you can see this task."}</span><button className="button primary" disabled={busy} type="submit"><Check size={15}/>{busy?"Saving…":"Save task"}</button></div></fieldset></form></Modal>}
-    {selectedMail&&<Modal notice={toast} wide onClose={()=>setSelectedMail(null)} label="Email details"><div className="modal-heading"><span className="eyebrow">{accountFor(selectedMail.accountId)?.email??"EMAIL"}</span><button className="icon-button" aria-label="Close email" onClick={()=>setSelectedMail(null)}><X size={20}/></button></div><h2 className="modal-title">{selectedMail.subject}</h2><div className="email-meta"><strong>{selectedMail.sender}</strong><small>To: {selectedMail.recipients}</small><small>{timestamp(selectedMail.receivedAt)} · Plain text preview</small></div><div className="email-body">{selectedMail.body||selectedMail.snippet}</div>{JSON.parse(selectedMail.attachments).length>0&&<div className="attachment-list"><strong>Attachments</strong>{JSON.parse(selectedMail.attachments).map((f:{name:string;size:number},i:number)=><span key={i}><FileText size={14}/>{f.name} · {Math.ceil(f.size/1024)} KB{/\.pdf$/i.test(f.name)?<button className="button small" disabled={pdfAttachmentLoading} onClick={()=>void openPdfAttachment(selectedMail,i,f.name)}>{pdfAttachmentLoading?"Opening…":"View PDF"}</button>:<small>Open the original email to download</small>}</span>)}</div>}<div className="modal-footer email-actions"><div>{!demo&&accountFor(selectedMail.accountId)&&<a className="button" href={gmailUrl(accountFor(selectedMail.accountId)!.email,selectedMail.threadId)} target="_blank" rel="noopener noreferrer">Open in Gmail<ArrowUpRight size={14}/></a>}<button className="button primary" onClick={()=>editTask(undefined,selectedMail)}><Plus size={15}/>Create task</button></div><div>{(["document","slides","sheet"] as const).map(k=>{const Icon=kindIcons[k];return <button key={k} className="button small" title={`Create ${k} linked to email`} aria-label={`Create ${k} linked to email`} onClick={()=>newFile(k,undefined,selectedMail)}><Icon size={16}/></button>;})}</div></div></Modal>}
-    {officeImport&&<Modal label="Open file copy" onClose={()=>setOfficeImport(null)}><div className="modal-heading"><span className="eyebrow">OPEN FROM YOUR DEVICE</span><button className="icon-button" aria-label="Cancel file opening" onClick={()=>setOfficeImport(null)}><X size={20}/></button></div><h2 className="modal-title">{officeImport.title}</h2><p className="task-notes">{officeImport.kind==="slides"?`${officeImport.content.slides?.length} slides ready to open.`:officeImport.kind==="sheet"?`${Object.keys(officeImport.content.cells??{}).length} populated cells ready to open.`:"Your document is ready to open."}</p>{officeImport.warnings.map(warning=><p className="office-import-note" key={warning}>{warning}</p>)}<p className="office-import-note">The file is read on this device. Save the opened copy to keep it in {guest?"this browser":"your workspace"}. Your original file stays unchanged.</p><div className="modal-footer"><button className="button" onClick={()=>setOfficeImport(null)}>Cancel</button><button className="button primary" onClick={openOfficeCopy}>Open editable copy<ArrowRight size={15}/></button></div></Modal>}
-    {editingFile&&<Modal notice={toast} wide onClose={closeFile} label="File editor"><div className="file-editor"><div className="editor-header"><span className={`file-icon ${editingFile.kind}`}>{(()=>{const Icon=kindIcons[editingFile.kind];return <Icon size={20}/>;})()}</span><div className="editor-title"><input aria-label="File title" maxLength={200} value={editingFile.title} onChange={e=>setEditingFile({...editingFile,title:e.target.value})}/><span>{guest?"This browser · ":demo?"Sample session · ":"Private workspace · "}{dirty?"Unsaved changes":editingFile.revision?"All changes saved":"New draft"}</span></div><button className="button" disabled={busy} onClick={()=>void exportCurrent()}><Download size={15}/>Export {editingFile.kind==="document"?"DOCX":editingFile.kind==="slides"?"PPTX":"XLSX"}</button>{editingFile.kind==="document"&&<button className="button" onClick={()=>download(new Blob(["<!doctype html><html><meta charset=\"utf-8\"><body>"+cleanHtml(fileContent.html??"")+"</body></html>"],{type:"text/html"}),editingFile.title+".html")}>HTML</button>}<button className="button primary" disabled={busy||!editingFile.title.trim()} onClick={()=>void saveFile()}><Save size={15}/>{busy?"Working…":"Save"}</button><button className="icon-button" aria-label="Close editor" disabled={busy} onClick={closeFile}><X size={20}/></button></div><div className="editor-links"><Link2 size={14}/><label>Linked task<select aria-label="Linked task" value={editingFile.taskId??""} onChange={e=>setEditingFile({...editingFile,taskId:e.target.value||null})}><option value="">No task linked</option>{data.tasks.map(t=><option key={t.id} value={t.id}>{t.title}</option>)}</select></label>{editingFile.mailId&&<button className="text-button" onClick={()=>void sourceEmail(editingFile.mailId!)}>Source email <ArrowUpRight size={13}/></button>}<button className="text-button draft-download" onClick={()=>download(new Blob([JSON.stringify({...editingFile,content:JSON.stringify(fileContent)},null,2)],{type:"application/json"}),"maildesk-draft.json")}>Download draft backup</button></div>{editingFile.kind==="document"?<DocumentEditor key={editingFile.id} content={fileContent} onChange={setFileContent}/>:editingFile.kind==="slides"?<SlidesEditor content={fileContent} onChange={setFileContent}/>:<SheetEditor content={fileContent} onChange={setFileContent}/>}</div></Modal>}
-  </div>;
+  async function connect(id?: string) {
+    setBusy(true);
+    setError("");
+    try {
+      const result = await suiteApi<{ url: string }>(
+        "/api/gmail/connect",
+        "POST",
+        {
+          ...(id ? { accountId: id } : {}),
+          permissions: Object.entries(permissions)
+            .filter(([, enabled]) => enabled)
+            .map(([name]) => name),
+        },
+      );
+      window.location.assign(result.url);
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  }
+  const app = apps.find((a) => a.id === active) ?? apps[0],
+    visible = files.filter(
+      (f) =>
+        f.kind === active &&
+        f.title.toLowerCase().includes(query.toLowerCase()),
+    );
+  if (open)
+    return (
+      <OfficeEditor
+        key={open.id}
+        file={open}
+        onClose={() => {
+          setOpen(null);
+          void reload();
+        }}
+      />
+    );
+  return (
+    <div className="suite-shell">
+      <aside className="suite-sidebar">
+        <Link className="suite-brand" href="/">
+          <span className="suite-logo">m.</span>
+          <div>
+            MailDesk<small>A place for your best work</small>
+          </div>
+        </Link>
+        <div className="suite-sidebar-label">YOUR WORKSPACE</div>
+        <SuiteNav active={active} onSelect={select} />
+        <div className="suite-sidebar-bottom">
+          <button onClick={() => setSettings(true)}>
+            <Settings size={17} />
+            Settings & accounts
+          </button>
+          <a href="/auth/sign-out">Sign out</a>
+          <p>
+            <ShieldCheck size={14} />
+            Private by design
+          </p>
+        </div>
+      </aside>
+      <main className="suite-main">
+        <header className="suite-topbar">
+          <span>
+            <LayoutGrid size={17} />
+            Productivity, with a little room to breathe.
+          </span>
+          <button
+            className="suite-avatar"
+            aria-label="Open account settings"
+            onClick={() => setSettings(true)}
+          >
+            {workspace?.userName?.slice(0, 1).toUpperCase() ?? "M"}
+          </button>
+        </header>
+        {error && (
+          <div role="alert" className="suite-error">
+            {error}
+            <button aria-label="Dismiss error" onClick={() => setError("")}>
+              <X size={16} />
+            </button>
+          </div>
+        )}
+        {active === "outlook" ? (
+          <OutlookWorkspace onSettings={() => setSettings(true)} />
+        ) : (
+          <div className="suite-library">
+            <div className="suite-page-heading">
+              <div>
+                <p className="suite-eyebrow">MAKE SOMETHING THAT MATTERS</p>
+                <h1>
+                  MailDesk {app.name}
+                  <span style={{ color: app.color }}>.</span>
+                </h1>
+                <p>{app.description}</p>
+              </div>
+              <span
+                className="suite-app-mark"
+                style={{ background: app.color }}
+              >
+                {app.letter}
+              </span>
+            </div>
+            {!configured && !loading && (
+              <div className="office-setup-banner">
+                <FolderOpen size={21} />
+                <div>
+                  <strong>Browser editor needs attention.</strong>
+                  <p>
+                    The browser editor is unavailable. Reload to retry. Your
+                    saved files remain available.
+                  </p>
+                </div>
+                <button
+                  className="suite-button"
+                  onClick={() => setSettings(true)}
+                >
+                  Setup details
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+            )}
+            <div className="suite-start-row">
+              <button
+                className="new-file-card"
+                disabled={busy}
+                onClick={() => {
+                  setTemplate("blank");
+                  setTitle(
+                    `Untitled ${app.name === "Word" ? "document" : app.name === "Excel" ? "workbook" : "presentation"}`,
+                  );
+                  setCreate(true);
+                }}
+              >
+                <div className="blank-file">
+                  <Plus size={30} />
+                </div>
+                <strong>
+                  Create a blank{" "}
+                  {app.name === "Word"
+                    ? "document"
+                    : app.name === "Excel"
+                      ? "workbook"
+                      : "presentation"}
+                </strong>
+                <small>A fresh place to start</small>
+              </button>
+              <button
+                className="import-file-card"
+                disabled={busy}
+                onClick={() => upload.current?.click()}
+              >
+                <Upload size={26} />
+                <strong>Open from your device</strong>
+                <small>
+                  {active === "document"
+                    ? "DOCX"
+                    : active === "sheet"
+                      ? "XLSX / CSV"
+                      : "PPTX"}{" "}
+                  · up to 3 MB · original retained
+                </small>
+              </button>
+              <input
+                hidden
+                ref={upload}
+                type="file"
+                aria-label="Import Office file"
+                accept={
+                  active === "document"
+                    ? ".docx"
+                    : active === "sheet"
+                      ? ".xlsx,.csv"
+                      : ".pptx"
+                }
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (f) void importFile(f);
+                }}
+              />
+            </div>
+            <div className="suite-file-heading">
+              <h2>
+                Your{" "}
+                {active === "document"
+                  ? "documents"
+                  : active === "sheet"
+                    ? "workbooks"
+                    : "presentations"}
+                <span>{visible.length}</span>
+              </h2>
+              <div>
+                <label className="suite-file-search">
+                  <Search size={15} />
+                  <input
+                    aria-label="Find files"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Find a file…"
+                  />
+                </label>
+                <button
+                  aria-label="Refresh files"
+                  className="suite-button"
+                  disabled={loading}
+                  onClick={() => void reload()}
+                >
+                  <RefreshCw size={16} />
+                </button>
+              </div>
+            </div>
+            {loading ? (
+              <p role="status">Loading saved work…</p>
+            ) : visible.length ? (
+              <div className="suite-file-grid">
+                {visible.map((file) => (
+                  <article className="suite-file-card" key={file.id}>
+                    <button className="file-open" onClick={() => setOpen(file)}>
+                      <div
+                        className="file-preview"
+                        style={{ color: app.color }}
+                      >
+                        <FileText size={38} />
+                        <span>{file.extension.toUpperCase()}</span>
+                      </div>
+                      <strong>{file.title}</strong>
+                      <small>
+                        Updated {new Date(file.updatedAt).toLocaleDateString()}{" "}
+                        · version {file.revision}
+                      </small>
+                    </button>
+                    <button
+                      className="file-rename"
+                      aria-label={`Rename ${file.title}`}
+                      disabled={busy}
+                      onClick={async () => {
+                        const name = prompt("File name", file.title);
+                        if (!name?.trim() || name === file.title) return;
+                        setBusy(true);
+                        try {
+                          const result = await suiteApi<{ file: NativeFile }>(
+                            `/api/office/files/${file.id}`,
+                            "PATCH",
+                            { title: name },
+                          );
+                          setFiles((current) =>
+                            current.map((f) =>
+                              f.id === file.id ? result.file : f,
+                            ),
+                          );
+                        } catch (e) {
+                          setError((e as Error).message);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <a
+                      href={`/api/office/files/${file.id}/download`}
+                      aria-label={`Download ${file.title}`}
+                    >
+                      <Download size={16} />
+                    </a>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="suite-empty files-empty">
+                <FileText size={32} />
+                <h3>Your next idea starts here.</h3>
+                <p>Create a file or open one from your device.</p>
+              </div>
+            )}
+            {workspace?.legacyFiles.some((f) => f.kind === active) && (
+              <section className="legacy-section">
+                <button
+                  className="suite-button"
+                  onClick={() => setShowLegacy(!showLegacy)}
+                >
+                  <FolderOpen size={16} />
+                  Earlier MailDesk files (
+                  {
+                    workspace.legacyFiles.filter((f) => f.kind === active)
+                      .length
+                  }
+                  )
+                </button>
+                {showLegacy && (
+                  <>
+                    <p>
+                      Make a native Office copy to continue editing. The earlier
+                      saved file is kept. Conversion preserves the content
+                      supported by the old editor; it cannot recover formatting
+                      previously lost during import.
+                    </p>
+                    {workspace.legacyFiles
+                      .filter((f) => f.kind === active)
+                      .map((file) => (
+                        <div className="legacy-row" key={file.id}>
+                          <FileText size={16} />
+                          <strong>{file.title}</strong>
+                          <button
+                            className="suite-button"
+                            disabled={busy}
+                            onClick={() =>
+                              void newFile(file.id, file.kind, file.title)
+                            }
+                          >
+                            Open Office copy
+                            <ArrowRight size={14} />
+                          </button>
+                        </div>
+                      ))}
+                  </>
+                )}
+              </section>
+            )}
+          </div>
+        )}
+        <footer className="suite-footer">
+          A quieter place to get things done.
+          <span>MailDesk · Your private workspace</span>
+        </footer>
+      </main>
+      {create && (
+        <div className="suite-overlay">
+          <form
+            className="suite-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Create file"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void newFile();
+            }}
+          >
+            <header>
+              <h2>A fresh start.</h2>
+              <button
+                type="button"
+                aria-label="Close new file"
+                disabled={busy}
+                onClick={() => setCreate(false)}
+              >
+                <X size={20} />
+              </button>
+            </header>
+            <label>
+              File name
+              <input
+                required
+                autoFocus
+                maxLength={200}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </label>
+            <label>
+              Template
+              <select
+                value={template}
+                onChange={(e) => setTemplate(e.target.value)}
+              >
+                {OFFICE_TEMPLATES[
+                  active as "document" | "sheet" | "slides"
+                ].map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="suite-button primary"
+              disabled={busy || !title.trim()}
+              type="submit"
+            >
+              {busy ? "Creating…" : "Create file"}
+            </button>
+            {error && <p className="suite-error">{error}</p>}
+          </form>
+        </div>
+      )}
+      {settings && (
+        <div className="suite-overlay">
+          <section
+            className="suite-dialog settings-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Workspace settings"
+          >
+            <header>
+              <div>
+                <p className="suite-eyebrow">CONNECTED, ON YOUR TERMS</p>
+                <h2>Settings & accounts</h2>
+              </div>
+              <button
+                aria-label="Close settings"
+                disabled={busy}
+                onClick={() => setSettings(false)}
+              >
+                <X size={20} />
+              </button>
+            </header>
+            <h3>Google accounts</h3>
+            <p>
+              Read-only Gmail works with your existing connections. Select
+              additional permissions before connecting or reconnecting an
+              account.
+            </p>
+            <label className="check-label">
+              <input
+                type="checkbox"
+                checked={permissions.mail}
+                onChange={(e) =>
+                  setPermissions({ ...permissions, mail: e.target.checked })
+                }
+              />
+              Enable sending, drafts, labels, and mail actions
+            </label>
+            <label className="check-label">
+              <input
+                type="checkbox"
+                checked={permissions.calendar}
+                onChange={(e) =>
+                  setPermissions({ ...permissions, calendar: e.target.checked })
+                }
+              />
+              Enable Calendar events and invitations
+            </label>
+            {workspace?.accounts.map((account) => (
+              <div className="settings-account" key={account.id}>
+                <div>
+                  <strong>{account.email}</strong>
+                  <small>
+                    Last sync:{" "}
+                    {account.syncedAt
+                      ? new Date(account.syncedAt).toLocaleString()
+                      : "Not yet"}
+                  </small>
+                </div>
+                <div>
+                  <button
+                    className="suite-button"
+                    disabled={busy}
+                    onClick={() => void connect(account.id)}
+                  >
+                    Reconnect
+                  </button>
+                  <button
+                    className="suite-button"
+                    disabled={busy}
+                    onClick={async () => {
+                      if (
+                        !confirm(
+                          `Disconnect ${account.email} from Google? Your saved work and earlier records will be kept.`,
+                        )
+                      )
+                        return;
+                      setBusy(true);
+                      try {
+                        await suiteApi("/api/gmail/disconnect", "POST", {
+                          accountId: account.id,
+                        });
+                        await reload();
+                        window.location.assign("/?app=outlook&settings=1");
+                      } catch (e) {
+                        setError((e as Error).message);
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+            ))}
+            <button
+              className="suite-button primary"
+              disabled={busy || !workspace?.configured}
+              onClick={() => void connect()}
+            >
+              <Plus size={16} />
+              Connect Gmail account
+            </button>
+            {!workspace?.configured && (
+              <p className="form-help">
+                Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, TOKEN_ENCRYPTION_KEY
+                and APP_ORIGIN. Enable Gmail API and Calendar API, and register
+                the redirect URL:
+              </p>
+            )}
+            <code className="setup-code">
+              {workspace?.callbackUrl || "APP_ORIGIN/api/gmail/callback"}
+            </code>
+            <h3>Native Office editors</h3>
+            <p>
+              Editing and conversion run in your browser. Files are saved to
+              your private workspace only when changed. The editor loads when
+              you open a file.
+            </p>
+            <p className="form-help">
+              Powered by the AGPL v3 browser Office engine.{" "}
+              <a
+                href="/office/about.html"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                About & licenses
+              </a>{" "}
+              ·{" "}
+              <a
+                href="https://github.com/ranuts/document/tree/e975654679d2cc3ef61d67d93fdce2839327676c"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Editor source
+              </a>
+            </p>
+            <a className="suite-button" href="/auth/sign-out">
+              Sign out of MailDesk
+            </a>
+            <h3>Keep a copy of your work</h3>
+            <button
+              className="suite-button"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  const response = await fetch("/api/workspace/backup");
+                  if (!response.ok)
+                    throw Error("The backup could not be created.");
+                  download(
+                    await response.blob(),
+                    "maildesk-workspace-backup.json",
+                  );
+                } catch (e) {
+                  setError((e as Error).message);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              <Download size={16} />
+              Export workspace data
+            </button>
+            <button
+              className="suite-button"
+              onClick={() => {
+                try {
+                  const raw = localStorage.getItem("maildesk.guest.v1");
+                  if (!raw)
+                    throw Error(
+                      "No earlier guest backup was found in this browser.",
+                    );
+                  download(
+                    new Blob([raw], { type: "application/json" }),
+                    "maildesk-browser-backup.json",
+                  );
+                } catch (e) {
+                  setError((e as Error).message);
+                }
+              }}
+            >
+              <Download size={16} />
+              Earlier browser data
+            </button>
+            <p className="form-help">
+              Retired tasks, rooms and tool records remain in the database.
+              Backups contain private content; keep them somewhere safe. Google
+              tokens are excluded. AI conversations can be exported from Free AI
+              Studio.
+            </p>
+            {error && (
+              <p className="suite-error" role="alert">
+                {error}
+              </p>
+            )}
+          </section>
+        </div>
+      )}
+    </div>
+  );
 }
-function escapeHtml(s:string){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}

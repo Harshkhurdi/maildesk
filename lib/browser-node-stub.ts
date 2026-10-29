@@ -1,1 +1,2 @@
-export default {};
+const unavailableBrowserModule = {};
+export default unavailableBrowserModule;

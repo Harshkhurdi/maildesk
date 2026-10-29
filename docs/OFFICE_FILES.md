@@ -1,18 +1,9 @@
-# Open files from your device
+# Native Office files
 
-Go to Documents, Presentations, or Spreadsheets and choose **Open file**. Select a file, review the import notice, and choose **Open editable copy**. Save it to keep the copy in your workspace. Guest copies are saved only in that browser. Your original file is unchanged.
+Word, Excel and PowerPoint use native DOCX/XLSX/PPTX through a browser-only Office SDK/WebAssembly engine. Create a blank file or template, or import a native file. CSV converts to XLSX in a worker; formula-like CSV text is not executed. Editing/export does not invoke a Vercel conversion function or a separate document server.
 
-| Section | Supported files | What opens |
-| --- | --- | --- |
-| Documents | DOCX, TXT, HTML, HTM | Document body text, headings, basic bold/italic/underline formatting, list text and tables |
-| Presentations | PPTX | Slide text in deck order, speaker notes and plain background colors |
-| Spreadsheets | XLSX, CSV | First worksheet, cell positions, values and formulas, up to 500 rows and 26 columns |
-| PDF viewer | PDF | Existing local PDF reader with pages, text search, zoom and rotation |
+Original uploads remain byte-for-byte version 1. Edited files save as separate snapshots after a storage acknowledgement. Save conflicts protect newer revisions. Use Saved copy or Versions to download persisted content; failed saves offer an exported recovery copy. Keep the editor open until saved. Browser crashes can lose unexported edits.
 
-Office imports are editable copies rather than exact Office renderings. Word images, page layouts, headers, footnotes and tracked deletions are omitted. Presentation images, charts, animation and original layouts are omitted. Spreadsheet charts, macros and formatting are omitted. Spreadsheet formulas support SUM, AVERAGE, MIN, MAX, COUNT and arithmetic; other formulas show an error. The opening notice explains these limitations before the copy opens. Older DOC/PPT/XLS files should first be saved as DOCX/PPTX/XLSX in Office or LibreOffice.
+Earlier MailDesk JSON files can be converted into separate native copies; originals are kept. Conversion cannot recover fidelity lost by the old importer. Guest browser work is downloadable at `/guest`.
 
-DOCX/PPTX inputs may be up to 5 MB; XLSX/CSV up to 1 MB; text/HTML up to 500 KB. Expanded archives and text/cell sizes also have limits. Damaged, encrypted, oversized, external-entity and unsafe archive inputs fail without replacing saved work. Imports are read on the device and do not send files to an AI provider. Choosing Save stores the editable copy privately, or locally in guest mode.
-
-## Verification boundary
-
-The Office import regression suite uses actual generated DOCX, PPTX and XLSX files, checks spacing across formatted text runs, slide order/notes, leading blank rows, formulas and file rejection. Chat tests cover concurrent incoming messages and retrying WebRTC descriptions. Automated checks cannot confirm that two people actually hear or see one another. That remains a separate real two-person test; no relay is configured at the owner's request.
+See [README](../README.md) for limits, licensing, setup and supported providers. See [report](IMPLEMENTATION_REPORT.md) for actual verification and outstanding acceptance work.

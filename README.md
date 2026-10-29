@@ -1,75 +1,95 @@
-# Maildesk on Vercel
+# MailDesk
 
-Maildesk keeps email, reviewed tasks, basic office editors, PDFs, conversations, and small personal tools in one private workspace. This Vercel edition preserves the original Maildesk design and uses Next.js 16.4.1, React, TypeScript, Drizzle, and PostgreSQL. The original Sites application remains separate.
+A private workspace with exactly five apps: **Word, Excel, PowerPoint, Outlook and Free AI Studio**. Next.js 16, React 19, TypeScript, existing Neon authentication and PostgreSQL remain the foundation. No Firebase, document-server host, Rust sidecar, cron, background sync, or paid AI is required.
 
-Production: https://maildesk-theta.vercel.app
+The [GenOffice](https://github.com/genspark-ai/genoffice) reference informed the native-file workspace and optional AI panel. Its Electron/Rust desktop implementation is not bundled. Office editing uses a pinned [browser Office engine](https://github.com/ranuts/document/tree/e975654679d2cc3ef61d67d93fdce2839327676c), built from its AGPL-3.0 source and served as static assets on Vercel. The mature offline ONLYOFFICE SDK and WebAssembly converter do the work **on the user's machine**. This is not a claim of full Microsoft Office compatibility.
 
-Repository: https://github.com/Harshkhurdi/maildesk
+## Low CPU Vercel architecture
 
-Vercel is connected to this repository. Pushes to the production branch deploy the app; keep migrations explicit and apply them before deploying schema-dependent code. Production secrets are managed in Vercel, outside Git.
+- Document creation, CSV/legacy conversion, full archive validation, editing and exports run in a browser/worker. They are never imported into the Office API routes.
+- The editor and PDF assets load only when needed and are static files. Hashed editor assets use long-lived caching. WebAssembly uses same-origin isolation and correct Brotli headers.
+- Loading a file makes an authenticated download request. Saving makes one bounded authenticated upload. There is no save-status polling, remote conversion job, heartbeat or idle request loop.
+- Autosave runs only after edits, after 30 seconds. A file with no changes makes no save request. Failed saves show a recovery-download action; they do not retry continuously in the background.
+- Server routes check ownership, bounded ZIP directory metadata, a SHA-256 hash and revision, then store an atomic checkpoint. Unchanged bytes do not create another version. Lists and ownership lookups select metadata without loading stored base64 blobs.
+- Google reads happen on explicit navigation/search/refresh. Threads and attachments load on demand. Free-model verification shares the existing short-lived cached catalog rather than fetching a catalog for each chat request.
 
-## Sign in and privacy
+Authentication, authorized mail actions and database reads/writes still use Vercel Functions. CPU use cannot be zero or guaranteed under a quota; no production usage benchmark has been measured. Large static downloads use bandwidth and first opens can be slow. The generated editor distribution is roughly 510 MB across many files; it is built once during deployment, not downloaded on every app open.
 
-Use the sign-in page to request a one-time code for your email. The personal workspace is restricted to the verified `WORKSPACE_OWNER_EMAIL` address. Every personal API checks the verified server session and ownership; caller-supplied authentication headers are ignored. Guests can sign in with their own verified email and see only rooms addressed to that email. Creating a room does not send an invitation email automatically. Copy its link to share it yourself.
+## Features and preserved data
 
-Gmail task detection uses rules and manual review. Maildesk does not automatically send email bodies to AI. AI Studio sends only the prompts and attachments you deliberately submit. It allows verified free model variants and applies zero-price provider limits; external free-service quotas still apply.
+Native DOCX/XLSX/PPTX creation, templates, uploads, CSV import, file naming, saved copies, historical downloads and conversion of earlier JSON files. Original uploads remain byte-for-byte version 1; edits save a separate native snapshot. A stale tab receives a conflict rather than overwriting newer work. The optional AI panel sends only prompts/files explicitly submitted by the user.
 
-## Guest access without email
+Outlook supports **Gmail and Google Calendar**, not Microsoft/Exchange accounts: folders, labels, search, pagination, threads, composing/replies/forwarding, drafts, attachments, contextual PDF preview, read/flag/archive/trash/move actions, account switching and browser-local signatures. Calendar has day/week/month views, timed event forms, guests, reminders, timezone and ETag conflict protection. Recurring/all-day event editing stays in Google Calendar. Recipient suggestions use loaded headers, not a complete Contacts sync.
 
-Choose **Continue as guest** on the sign-in page, or open https://maildesk-theta.vercel.app/guest. Guest tasks, documents, presentations, spreadsheets, PDFs, code projects and bookmarks work without an email account. Saved guest work stays in that browser profile, is accessible to anyone using it, and does not sync across devices. Export your work before clearing browser data. Use **Accounts & settings → Restore guest backup** to bring an exported guest workspace into another browser. Review the item counts before restoring; identical records are skipped and changed records become separate copies, keeping existing work and imported task links. Guest records are separate from signed-in data and are not automatically imported when you sign in. Connected Gmail, AI and conversation rooms still require verified sign-in.
+Free AI Studio retains streaming, settings, saved browser conversations, explicit attachments and import/export, with verified zero-price model enforcement. Calling, person-to-person messaging, code execution, tasks, shopping and web utility routes are retired. The original tables and browser keys remain; no data-drop migration is included. Google disconnect disables the credential without deleting files, cached mail or retired records.
 
-## Tools
+## Setup on Vercel
 
-| Tool | What you can use |
+Use Node **24.x**. Keep all existing credentials and especially the token-encryption key.
+
+```sh
+npm ci
+cp .env.example .env.local
+```
+
+| Variable | Purpose |
 | --- | --- |
-| Gmail | Connect up to ten accounts using read-only Google OAuth; manually refresh only the newest 25 emails per account, search that recent window, open original Gmail threads, and review suggested tasks |
-| Tasks | Review, confirm, prioritize, date, snooze, complete, and link tasks to files and source emails |
-| Documents, presentations, spreadsheets | Basic editors, private saves, linked tasks/emails, and DOCX/PPTX/XLSX downloads; these are not full Microsoft Office replacements |
-| PDF viewer | Local PDF opening, page navigation, zoom, search, text view, and supported Gmail PDF attachments |
-| Calls & messages | One-to-one rooms, text messages, read receipts, saved file copies, voice/video calls, mute/camera controls, and call history |
-| AI Studio | Manual chats, verified free model choices, attachments where supported, streaming, local chat history, history export/import, and settings. Image generation is removed because no verified free image models are currently available |
-| Code editor | Multiple saved projects and files, syntax highlighting, search, indentation, import/download, optimistic save conflicts, and an isolated HTML/CSS/JavaScript preview |
-| Web search | Real Google searches in browser tabs, private saved searches/bookmarks, exports, and restricted reading previews for embeddable public HTTPS websites |
+| `DATABASE_URL` | Existing PostgreSQL connection |
+| `DATABASE_URL_UNPOOLED` | Optional direct connection for migrations |
+| `NEON_AUTH_BASE_URL` | Existing Neon Auth endpoint |
+| `NEON_AUTH_COOKIE_SECRET` | Existing authentication cookie secret |
+| `WORKSPACE_OWNER_EMAIL` | Verified owner of the private suite |
+| `APP_ORIGIN` | Exact public HTTPS origin |
+| `TOKEN_ENCRYPTION_KEY` | Existing 32-byte AES key, encoded as base64url |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google web OAuth client |
+| `OPENROUTER_API_KEY` | Server key, limited by the app to verified free models |
 
-## Honest connection limits
+There are **no Office server secrets or Firebase credentials**. Do not replace the existing database/auth provider or rotate encryption keys as part of this deployment.
 
-- **Gmail** needs your own Google Cloud OAuth client and consent configuration. No Gmail accounts were copied or preconnected. Each manual refresh requests one page of at most 25 individual messages, excludes spam/trash, and never follows older pages or downloads whole threads. The cache is replaced only after a successful complete fetch. Saved tasks and office files remain when their source email falls outside this window; open Gmail for older context. Wait at least one minute between refresh attempts. Enable Gmail API, add the exact callback shown in Accounts & settings, and configure test users/verification as appropriate. Read-only Gmail scopes can require Google verification.
-- **Calls** use direct WebRTC with STUN by default. Restricted networks may require a configured TURN relay. Optional `CF_TURN_KEY_ID` and `CF_TURN_API_TOKEN` enable the existing Cloudflare relay adapter. Camera and microphone permission is requested when you start/accept a call. Calls are not recorded or transcribed.
-- **Code** previews block network requests and run without access to the parent app. Python, TypeScript, and other languages can be edited/downloaded; there is no server execution, terminal, package installer, or remote filesystem. Maximum 30 files and 900 KB per saved project; up to 100 projects. A looping script can still require stopping/reloading its browser frame.
-- **Web** does not proxy websites or bypass their framing restrictions. Google results open in a normal browser tab. The restricted embedded preview has scripts/forms disabled and many sites will decline to display.
-- **AI history** lives in the browser, scoped to its account/origin. Export conversations from the old site for your records; browser history does not automatically migrate to the Vercel origin. Use **Import JSON** in AI Studio to restore an exported conversation as a new local copy. Imports do not send messages to any AI provider. Provider free-pool limits can temporarily prevent replies even when the app is correctly configured.
+```sh
+# Supply environment variables to the migration process first.
+npm run db:migrate
+npm run build
+npm run dev
+```
 
-## Configuration
+The migration adds `office_files` and `office_versions` and preserves the old schema. Apply it to staging first. Scripts do not load `.env.local` automatically. No production database migration or deployment was performed during implementation.
 
-Required server settings: `DATABASE_URL` (pooled), `DATABASE_URL_UNPOOLED` (migrations), `NEON_AUTH_BASE_URL`, `NEON_AUTH_COOKIE_SECRET` (32+ random characters), `WORKSPACE_OWNER_EMAIL`, `TOKEN_ENCRYPTION_KEY` (base64url encoded random 32 bytes), `APP_ORIGIN` (exact production HTTPS origin). `OPENROUTER_API_KEY` enables AI Studio. Optional Google/relay settings are described above. Never prefix secrets with `NEXT_PUBLIC_`, commit env files, or include them in a downloaded backup.
+Deploy using the existing Next.js Vercel project, `npm ci` and `npm run build`. `prebuild` fetches a pinned editor source commit, installs its frozen lockfile using pnpm 11.4.0 and builds/copies static assets into ignored `public/office`. This requires build-time access to GitHub and npm. Build cache is under `.cache`. Generated assets and nested dependencies are excluded from Git, TypeScript and ESLint. See [the build script](scripts/prepare-browser-office.mjs). No vendor installation/build runs in a request handler.
 
-Neon Auth uses email OTP. Register `https://maildesk-theta.vercel.app` explicitly in Neon → Settings → Better Auth → Domains. The OTP-sending endpoint checks this allowlist; a rejected incorrect OTP does not prove that code delivery works. Successful sign-in requires the actual code from the owner or guest inbox. See https://neon.com/docs/auth/guides/configure-domains . Follow Neon's production email-delivery guidance and configure custom SMTP for long-term production use: https://neon.com/docs/auth/production-checklist.md . The Neon account itself may separately request email activation before its dashboard can be managed.
+## Google consent
 
-## Development and deployment
+Enable Gmail API and Google Calendar API. Register exactly `APP_ORIGIN/api/gmail/callback`. Settings offers explicit mail/calendar permissions when connecting or reconnecting. The default remains read-only; old refresh tokens are not silently upgraded.
 
-1. `npm ci` with Node 24.
-2. Create an ignored `.env.local` pointing at an isolated development database and Auth branch. Do not point local fixtures at production.
-3. `node --env-file=.env.local scripts/migrate.mjs` (use the direct connection when available).
-4. `npm run dev` opens the app at http://127.0.0.1:5174 . Real sign-in is required; no test bypass is shipped.
-5. `npm run typecheck` and `npm run build` validate the release. `npm test` runs deterministic policy, calculation, import, request, call-engine, and isolated integration regression checks. See `docs/CODE_AUDIT.md` for the latest audit fixes and verification boundaries.
-6. Apply reviewed Drizzle migrations to the separate production database, then `vercel --prod --yes --scope harsh-1c69` from this folder. Inspect the returned deployment and verify the stable URL before claiming success.
+| Capability | Scope |
+| --- | --- |
+| Mail reading | `https://www.googleapis.com/auth/gmail.readonly` |
+| Sending, drafts, mail actions | `https://www.googleapis.com/auth/gmail.modify` |
+| Calendar events | `https://www.googleapis.com/auth/calendar.events` |
 
-The initial migration was verified against an isolated local PostgreSQL database before it was applied to the new, empty production database. No fictional production records were seeded. Local tests used a temporary owner and guest overlay which was removed before the release build. API scripts inherited from the Sites edition require that edition's local fixture harness; they are not production test scripts.
+Granted scopes are encrypted with the refresh token and enforced server-side. Google consent-screen/test-user/verification restrictions still apply. Reconnect staging accounts to authorize additional capabilities. Never put the client secret, encryption key or refresh tokens in public variables.
 
-## Verification for this migration
+## Limits and recovery
 
-- 52 pure task, spreadsheet, conversation, free-AI, stream, URL, checkout-domain, and preview-policy tests passed.
-- 19 task/file API assertions, 43 conversation/access/call-state checks, and 22 utility/access/revision/URL/X-setup checks passed against isolated local PostgreSQL with two temporary test users.
-- Browser verification covered the original overview design, runnable code preview, project saving, saved bookmarks, and real Google search results (earlier shopping checks are historical; the feature is now removed).
-- Native Next.js 16.4.1 production build passed after replacing browser-incompatible PowerPoint Node imports with browser stubs. Text slides and notes remain supported; no unsupported filesystem/network image access is exposed in the browser.
-- The initial migration checked rejection of an invalid OTP. That check did not establish successful code delivery. The subsequent production audit fixed the Neon trusted-domain setting and verified actual code delivery, owner sign-in, session restoration, task saving/completion, office editing and real DOCX/PPTX/XLSX downloads, local PDF controls, code preview, bookmarks, Google results, and manual quote totals. See `docs/LIVE_AUDIT.md` for evidence and remaining integration limits.
+- Native uploads/checkpoints: **3 MB**, below the host's request limit with multipart overhead. Browser validation bounds total expanded data to 64 MB, XML entries to 16 MB, other entries to 32 MB and 4,096 entries. The server independently checks the directory before accepting bytes. Malformed contents are also rejected by browser parsing/editor open; upload is not a malware scan.
+- CSV: 5,000 rows, 100 columns and 250,000 cells; formula-like CSV text stays inert. Use native XLSX for formulas/multiple sheets.
+- Mail sending: 650 KB content/attachment budget, ten attachments maximum. Attachment/PDF download: 3 MB. Larger items stay in Gmail.
+- Lists show 500 native/500 earlier files; history lists 200 checkpoints. Exact owned revision URLs remain downloadable.
+- PostgreSQL stores complete snapshots, without pruning. Monitor storage and back up before deployment. A workspace JSON backup includes legacy/retired records and native metadata; native bytes/versions download separately.
+- Save is acknowledged only after storage responds. An exported recovery copy remains available if upload fails. Keep the editor open until saved; browser process crashes/reloads can lose edits not yet exported. There is no claim of durable offline editing/recovery.
+- Earlier guest data remains under `maildesk.guest.v1`; `/guest` offers a raw backup. AI history retains its original browser storage. Neither is automatically uploaded.
 
-The Next.js and sharp findings were cleared by the framework update. A deeper compatibility review adds scoped overrides for ExcelJS→UUID 11.1.1, PptxGenJS→image-size 2.0.3, and esbuild-kit→esbuild 0.28.2. Exporter round trips and Drizzle transforms validate these changes. The remaining npm audit findings concern the development-only braces/glob ESLint chain, for which no patched braces release is published. ExcelJS's browser prebundle embeds older UUID code; the app uses its unaffected v4 path, and the package override does not rewrite vendor bundles. Production package audit results and live export evidence are recorded separately in the latest release report.
+## Licensing and validation
 
-See [REMAINING_SETUP.md](docs/REMAINING_SETUP.md) for the remaining Gmail connection steps. Do not paste secrets in chat.
+The browser engine and its embedded editor are **AGPL-3.0**, with upstream notices. [LICENSE, NOTICE and source/build information](third_party/browser-office/SOURCE.md) are retained and linked from Settings. Review the upstream terms and source-availability obligations before merging/redistributing; this change does not assign a license to pre-existing repository code. No commercial Office license is included. No GenOffice code was copied.
 
-Back up your tasks and office files through Accounts & settings. Code projects, bookmarks, and AI chat history have their own export controls. Environment secrets and connected-account tokens are excluded from user exports.
+```sh
+npm test
+npm run typecheck
+npm run lint
+npm run build
+npx playwright install chromium
+npm run test:ui
+```
 
-## Current simplified scope
-
-The X and Shopping tabs, pages and API routes are removed. Google web search remains free to open. Existing saved shopping records stay in storage/backups for safekeeping and are not used by active tools. Image generation is removed; AI chat, explicit image/PDF attachments where supported, and chat history continue. Cloudflare setup is skipped; existing direct voice/video calls and chat remain, with no claim that a relay or restrictive-network test is configured.
+Browser tests use a temporary development-only route and mock all Google/storage APIs, never production credentials. They exercise actual browser conversion/editor assets; tests do not send real mail or modify real events. Use `MAILDESK_CHROMIUM_PATH` and `MAILDESK_CHROMIUM_ARGS` for an existing browser. See [implementation report](docs/IMPLEMENTATION_REPORT.md) for recorded results and outstanding acceptance tests. Snapshot history is downloadable, not visual per-change history; import an old copy as a new file to restore it.
