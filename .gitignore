@@ -11,3 +11,4 @@ public/pdfjs/
 .sites-runtime/
 public/office/
 .cache/
+public/maildesk-release.json
