@@ -37,7 +37,7 @@ export function useChat(
 
   // Latest settings without re-creating stream callbacks.
   const settingsRef = useRef(settings);
-  settingsRef.current = settings;
+  useEffect(() => { settingsRef.current = settings; }, [settings]);
 
   useEffect(() => {
     getAllConversations().then(setConversations).catch(err => setError(`History could not be loaded: ${String(err)}`));

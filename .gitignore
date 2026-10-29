@@ -9,3 +9,6 @@ node_modules/
 public/pdfjs/
 .vercel
 .sites-runtime/
+public/office/
+.cache/
+public/maildesk-release.json

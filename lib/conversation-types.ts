@@ -1,4 +1,0 @@
-export type ConversationRoom={id:string;title:string;ownerId:string;ownerName:string;ownerEmail:string;participantName:string;participantEmail:string;ownerReadId:number;participantReadId:number;archivedAt:string|null;createdAt:string;updatedAt:string};
-export type ConversationMessage={id:number;roomId:string;senderId:string;senderName:string;nonce:string;body:string;resource:string|null;createdAt:string};
-export type ConversationCall={id:string;roomId:string;callerId:string;callerClientId:string;callerName:string;calleeId:string|null;calleeClientId:string|null;kind:"audio"|"video";status:string;callerSeenAt:number;calleeSeenAt:number;createdAt:string;acceptedAt:string|null;endedAt:string|null;endReason:string|null};
-export type CallSignal={type:"description";description:RTCSessionDescriptionInit}|{type:"ice";candidate:RTCIceCandidateInit}|{type:"media";audio:boolean;video:boolean};

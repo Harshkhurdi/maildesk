@@ -1,9 +1,11 @@
 "use client";
+/* PDF.js is an imperative external system: attachment, page and search effects reset its UI state. */
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useCallback,useEffect,useRef,useState } from "react";
-import { FileText,Upload,ZoomIn,ZoomOut,RotateCw,ChevronLeft,ChevronRight,Search,Download,ArrowUpRight,X,LockKeyhole,Maximize2,LoaderCircle,ShieldCheck,BookOpen,TextSelect } from "lucide-react";
+import { FileText,Upload,ZoomIn,ZoomOut,RotateCw,ChevronLeft,ChevronRight,Search,Download,ArrowUpRight,X,LockKeyhole,Maximize2,LoaderCircle,ShieldCheck,TextSelect } from "lucide-react";
 import type { PDFDocumentProxy,PDFDocumentLoadingTask,RenderTask,TextLayer } from "pdfjs-dist";
 import { download } from "@/lib/exporters";
-import { safeUrl } from "@/lib/task-rules";
+import { safeUrl } from "@/lib/safe-url";
 import { pdfPageText,pdfSearchMatch } from "@/lib/pdf-search";
 import "@/vendor/pdf-text-layer.css";
 export type PdfSource={blob:Blob;name:string;origin:"local"|"gmail"};
@@ -14,7 +16,9 @@ export default function PdfViewer({source,onSource}:{source:PdfSource|null;onSou
   const [pdf,setPdf]=useState<PDFDocumentProxy|null>(null),[page,setPage]=useState(1),[pageDraft,setPageDraft]=useState("1"),[zoom,setZoom]=useState(1),[fit,setFit]=useState(true),[rotation,setRotation]=useState(0),[loading,setLoading]=useState(false),[rendering,setRendering]=useState(false),[error,setError]=useState(""),[progress,setProgress]=useState(0),[width,setWidth]=useState(700),[dimensions,setDimensions]=useState({width:0,height:0}),[links,setLinks]=useState<PageLink[]>([]),[password,setPassword]=useState(""),[needsPassword,setNeedsPassword]=useState(false),[wrongPassword,setWrongPassword]=useState(false),[query,setQuery]=useState(""),[hits,setHits]=useState<Hit[]>([]),[searchProgress,setSearchProgress]=useState(0),[searching,setSearching]=useState(false),[showSearch,setShowSearch]=useState(false),[showText,setShowText]=useState(false),[pageText,setPageText]=useState(""),[expanded,setExpanded]=useState(false),[dragging,setDragging]=useState(false),[blobUrl,setBlobUrl]=useState("");
   const canvas=useRef<HTMLCanvasElement>(null),textLayer=useRef<HTMLDivElement>(null),viewport=useRef<HTMLDivElement>(null),fileInput=useRef<HTMLInputElement>(null),passwordCallback=useRef<((s:string)=>void)|null>(null),textCache=useRef(new Map<number,string>()),actualScale=useRef(1);
   useEffect(()=>{const el=viewport.current;if(!el)return;const observer=new ResizeObserver(entries=>setWidth(Math.max(200,entries[0].contentRect.width-48)));observer.observe(el);return()=>observer.disconnect();},[]);
+  // Create and revoke the current attachment’s browser object URL.
   useEffect(()=>{if(!source){setBlobUrl("");return;}const url=URL.createObjectURL(source.blob);setBlobUrl(url);return()=>URL.revokeObjectURL(url);},[source]);
+  // Reset PDF.js state when an external attachment changes.
   useEffect(()=>{
     let active=true,task:PDFDocumentLoadingTask|undefined;
     setPdf(null);setPage(1);setZoom(1);setFit(true);setRotation(0);setError("");setPageText("");setLinks([]);setQuery("");setHits([]);setNeedsPassword(false);setWrongPassword(false);setPassword("");textCache.current.clear();passwordCallback.current=null;
@@ -32,6 +36,7 @@ export default function PdfViewer({source,onSource}:{source:PdfSource|null;onSou
     }catch(e){if(!active)return;setLoading(false);setNeedsPassword(false);setError(e instanceof Error&&e.name==="InvalidPDFException"?"This file is not a readable PDF, or it is damaged. Try the original file or open it in your browser.":"This PDF could not be opened here. Try reopening it, or use Open in browser / Download below.");}})();
     return()=>{active=false;passwordCallback.current=null;void task?.destroy();};
   },[source]);
+  // Keep the page input in sync with PDF.js navigation.
   useEffect(()=>{setPageDraft(String(page));viewport.current?.scrollTo({top:0,left:0});},[page]);
   useEffect(()=>{
     if(!pdf||!canvas.current||!textLayer.current)return;
@@ -57,10 +62,11 @@ export default function PdfViewer({source,onSource}:{source:PdfSource|null;onSou
       layer=new lib.TextLayer({container:textLayer.current!,textContentSource:content,viewport:view});
       await layer.render();
       const annotations=await p.getAnnotations({intent:"display"});if(!active)return;
-      setLinks(annotations.flatMap((a:any)=>{const url=safeUrl(a.url);if(!url||!Array.isArray(a.rect))return [];const [x1,y1]=view.convertToViewportPoint(a.rect[0],a.rect[1]),[x2,y2]=view.convertToViewportPoint(a.rect[2],a.rect[3]);return [{url,left:Math.min(x1,x2),top:Math.min(y1,y2),width:Math.abs(x2-x1),height:Math.abs(y2-y1)}];}));
+      setLinks(annotations.flatMap((a:{url?:string;rect?:number[]})=>{const url=safeUrl(a.url);if(!url||!Array.isArray(a.rect))return [];const [x1,y1]=view.convertToViewportPoint(a.rect[0],a.rect[1]),[x2,y2]=view.convertToViewportPoint(a.rect[2],a.rect[3]);return [{url,left:Math.min(x1,x2),top:Math.min(y1,y2),width:Math.abs(x2-x1),height:Math.abs(y2-y1)}];}));
     }catch(e){if(active&&!(e instanceof Error&&e.name==="RenderingCancelledException"))setError("This page could not be rendered. Try another page, reduce the zoom, or open the PDF in your browser.");}finally{if(active)setRendering(false);}})();
     return()=>{active=false;renderTask?.cancel();layer?.cancel();};
   },[pdf,page,fit,zoom,rotation,width]);
+  // Synchronize the asynchronous PDF.js text search and its progress state.
   useEffect(()=>{
     if(!pdf||!query.trim()){setHits([]);setSearching(false);setSearchProgress(0);return;}
     let active=true;setSearching(true);setHits([]);setSearchProgress(0);

@@ -1,16 +1,62 @@
-import { and,eq,inArray,like,or } from "drizzle-orm";
-import { accounts,mail,tasks,files } from "@/db/schema";
-import { guard,body,json,failure,HttpError,decrypt } from "@/lib/server";
-export async function POST(request:Request){try{
-  const {user,db}=await guard(request);const p=await body(request);if(typeof p.accountId!=="string")throw new HttpError(400,"Select an account.");
-  const [a]=await db.select().from(accounts).where(and(eq(accounts.id,p.accountId),eq(accounts.ownerId,user.userId)));if(!a)throw new HttpError(404,"Account not found.");if(a.leaseId&&a.leaseUntil>Date.now())throw new HttpError(409,"Wait for the current refresh to finish before disconnecting.");
-  let revoked=false;try{const token=await decrypt(a.token);const r=await fetch("https://oauth2.googleapis.com/revoke",{method:"POST",body:new URLSearchParams({token:token.refreshToken}),signal:AbortSignal.timeout(15000)});revoked=r.ok;}catch{}
-  await db.transaction(async tx=>{
-await Promise.all([
-    tx.update(files).set({taskId:null}).where(and(eq(files.ownerId,user.userId),inArray(files.taskId,db.select({id:tasks.id}).from(tasks).where(eq(tasks.accountId,a.id))))),
-    tx.update(files).set({mailId:null}).where(and(eq(files.ownerId,user.userId),or(like(files.mailId,`${a.id}:%`),inArray(files.mailId,db.select({id:mail.id}).from(mail).where(eq(mail.accountId,a.id)))))),
-    tx.delete(tasks).where(and(eq(tasks.ownerId,user.userId),eq(tasks.accountId,a.id))),
-    tx.delete(mail).where(and(eq(mail.ownerId,user.userId),eq(mail.accountId,a.id))),
-    tx.delete(accounts).where(and(eq(accounts.ownerId,user.userId),eq(accounts.id,a.id))),
-  ]);});return json({disconnected:true,revoked,message:revoked?"Account disconnected and Google access revoked.":"Local account data was removed. Google revocation could not be confirmed; remove Maildesk access in your Google Account settings."});
-}catch(e){return failure(e);}}
+import { and, eq } from "drizzle-orm";
+import { accounts } from "@/db/schema";
+import {
+  guard,
+  body,
+  json,
+  failure,
+  HttpError,
+  decrypt,
+  encrypt,
+} from "@/lib/server";
+export async function POST(request: Request) {
+  try {
+    const { user, db } = await guard(request),
+      p = await body(request);
+    if (typeof p.accountId !== "string")
+      throw new HttpError(400, "Choose an account.");
+    const predicate = and(
+      eq(accounts.id, p.accountId),
+      eq(accounts.ownerId, user.userId),
+    );
+    const [row] = await db.select().from(accounts).where(predicate);
+    if (!row) throw new HttpError(404, "Account not found.");
+    let revoked = false;
+    try {
+      const token = await decrypt(row.token);
+      if (token.refreshToken)
+        revoked = (
+          await fetch("https://oauth2.googleapis.com/revoke", {
+            method: "POST",
+            body: new URLSearchParams({ token: token.refreshToken }),
+            signal: AbortSignal.timeout(15_000),
+          })
+        ).ok;
+    } catch {
+      /* Local access is disabled even if Google's revocation service is unavailable. */
+    }
+    const [saved] = await db
+      .update(accounts)
+      .set({
+        token: await encrypt({ refreshToken: null, scopes: [] }),
+        phase: "disconnected",
+        error: "Disconnected. Reconnect this account to enable Google access.",
+      })
+      .where(and(predicate, eq(accounts.token, row.token)))
+      .returning({ id: accounts.id });
+    if (!saved)
+      throw new HttpError(
+        409,
+        "This connection changed while disconnecting. Refresh account settings.",
+      );
+    return json({
+      disconnected: true,
+      revoked,
+      message: revoked
+        ? "Google access disconnected. Your saved work and earlier records are kept."
+        : "Local access disconnected. Google revocation could not be confirmed; remove MailDesk access in your Google Account settings. Your saved work is kept.",
+    });
+  } catch (e) {
+    return failure(e);
+  }
+}

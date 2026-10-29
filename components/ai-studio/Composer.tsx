@@ -198,6 +198,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
           rows={1}
           onChange={autoresize}
           onKeyDown={onKeyDown}
+          onPaste={onPaste}
           placeholder={
             disabled
               ? "Select a free model to start…"

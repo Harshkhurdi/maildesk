@@ -1,5 +1,8 @@
 "use client";
+import "@/app/ai-studio/studio.css";
+import Link from "next/link";
 
+import { SuiteNav } from "@/components/suite-nav";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sidebar } from "@/components/ai-studio/Sidebar";
 import { ModelPicker } from "@/components/ai-studio/ModelPicker";
@@ -15,7 +18,7 @@ import {
 import type { FreeModel } from "@/lib/ai-studio/openrouter/types";
 import { MAX_CHAT_IMPORT_BYTES } from "@/lib/ai-studio/storage/import";
 
-export default function HomePage() {
+export default function HomePage({ embedded = false }: { embedded?: boolean } = {}) {
   const shellRef = useRef<HTMLDivElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -39,6 +42,7 @@ export default function HomePage() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem("maildesk-ai-settings");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (raw) setSettings({ ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as ChatSettings) });
     } catch {
       /* corrupted or unavailable */
@@ -54,7 +58,9 @@ export default function HomePage() {
     }
   }, []);
 
+  // Hydrate the browser-only theme preference after mounting.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     try{const dark=localStorage.getItem("maildesk-ai-theme")==="dark";shellRef.current?.classList.toggle("dark",dark);setIsDark(dark);}catch{}
   }, []);
 
@@ -170,8 +176,8 @@ export default function HomePage() {
   }, [chat]);
 
   return (
-    <div id="ai-studio-shell" ref={shellRef} className="ai-studio-shell"><div className="ai-studio-hostbar"><a href="/">← Maildesk workspace</a><strong>AI Studio<span>Free models</span></strong><a href="/conversations">Calls & messages ↗</a></div><p className="ai-studio-privacy">Only messages and attachments you send here go to OpenRouter and its model providers. Chat history is saved in this browser.</p><div className="ai-studio-app flex min-h-0 flex-1 overflow-hidden">
-      <Sidebar
+    <div id="ai-studio-shell" ref={shellRef} className="ai-studio-shell"><div className="ai-studio-hostbar"><Link href="/">← Maildesk workspace</Link><strong>AI Studio<span>Free models</span></strong><a href="/auth/sign-out">Sign out</a></div><div className="ai-suite-nav"><SuiteNav active="ai"/></div><p className="ai-studio-privacy">Only messages and attachments you send here go to OpenRouter and its model providers. Chat history is saved in this browser.</p><div className="ai-studio-app flex min-h-0 flex-1 overflow-hidden">
+      {!embedded && <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onToggleTheme={toggleTheme}
@@ -181,7 +187,7 @@ export default function HomePage() {
         totalTokens={totalTokens}
         onSelect={chat.select}
         onDelete={chat.remove}
-      />
+      />}
 
       <main className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center gap-2 px-3 py-2.5">
@@ -194,6 +200,7 @@ export default function HomePage() {
               <path d="M3 6h18M3 12h18M3 18h18" />
             </svg>
           </button>
+          {embedded && <button className="suite-button" onClick={() => chat.select("")}>New chat</button>}
           <ModelPicker models={models} selectedId={selectedId} onSelect={setSelectedId} />
           {<>
             <button disabled={chat.busy || importing} onClick={() => importInput.current?.click()} title="Import an AI Studio JSON export as a new local chat" className="rounded-lg px-2 py-1.5 text-xs font-medium text-ink-secondary transition-colors hover:bg-hover hover:text-ink disabled:opacity-40">{importing ? "Importing…" : "↑ Import JSON"}</button>
