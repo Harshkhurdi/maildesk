@@ -14,6 +14,7 @@ writeFileSync(
   "public/maildesk-release.json",
   JSON.stringify({
     ui: "office-workspace-v2",
+    guestAccess: true,
     environment: process.env.VERCEL_ENV ?? "local",
     databasePrepared: production,
     commit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useWorkspaceIdentity } from "./workspace-identity";
 import type { CSSProperties } from "react";
 import { AppIcon, TemplatePreview } from "./office-brand";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -49,6 +50,7 @@ type WorkspaceData = {
   userName: string;
 };
 export default function Maildesk() {
+  const identity = useWorkspaceIdentity();
   const [active, setActive] = useState("document"),
     [workspace, setWorkspace] = useState<WorkspaceData | null>(null),
     [files, setFiles] = useState<NativeFile[]>([]),
@@ -283,6 +285,15 @@ export default function Maildesk() {
         </div>
       </aside>
       <main className="suite-main">
+        {identity.isGuest && (
+          <div className="guest-workspace-banner">
+            <span>
+              <strong>Guest workspace</strong> · All five apps are available.
+              Access is tied to this browser for 30 days.
+            </span>
+            <Link href="/auth/sign-in?signup=1">Sign up with email</Link>
+          </div>
+        )}
         {error && (
           <div role="alert" className="suite-error">
             {error}
@@ -671,6 +682,20 @@ export default function Maildesk() {
                 <X size={20} />
               </button>
             </header>
+            {identity.isGuest && (
+              <>
+                <h3>Your guest access</h3>
+                <p>
+                  Your files and Google connections are separate from everyone
+                  else’s. Keep this browser session or download important work.
+                  Email signup opens a separate account workspace; it does not
+                  automatically move guest files.
+                </p>
+                <Link className="suite-button" href="/auth/sign-in?signup=1">
+                  Create an email account
+                </Link>
+              </>
+            )}
             <h3>Google accounts</h3>
             <p>
               Read-only Gmail works with your existing connections. Select

@@ -10,10 +10,17 @@ import {
   newId,
   saveConversation,
   titleFromText,
+  historyDatabaseName,
 } from "@/lib/ai-studio/storage/db";
 import { streamChatClient } from "@/lib/ai-studio/chat/streamClient";
-import { type ChatSettings, DEFAULT_SETTINGS } from "@/lib/ai-studio/chat/settings";
-import { conversationChatRequest,serializeChatRequest } from "@/lib/ai-studio/chat/outgoing-request";
+import {
+  type ChatSettings,
+  DEFAULT_SETTINGS,
+} from "@/lib/ai-studio/chat/settings";
+import {
+  conversationChatRequest,
+  serializeChatRequest,
+} from "@/lib/ai-studio/chat/outgoing-request";
 import { readChatImport } from "@/lib/ai-studio/storage/import";
 
 /**
@@ -23,7 +30,9 @@ import { readChatImport } from "@/lib/ai-studio/storage/import";
 export function useChat(
   selectedModelId: string | null,
   settings: ChatSettings = DEFAULT_SETTINGS,
+  storageScope?: string,
 ) {
+  const historyDb = historyDatabaseName(storageScope);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<StoredMessage[]>([]);
@@ -33,36 +42,60 @@ export function useChat(
   const abortRef = useRef<AbortController | null>(null);
   const importingRef = useRef(false);
 
-  useEffect(()=>()=>{abortRef.current?.abort();},[]);
+  useEffect(
+    () => () => {
+      abortRef.current?.abort();
+    },
+    [],
+  );
 
   // Latest settings without re-creating stream callbacks.
   const settingsRef = useRef(settings);
-  useEffect(() => { settingsRef.current = settings; }, [settings]);
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
 
   useEffect(() => {
-    getAllConversations().then(setConversations).catch(err => setError(`History could not be loaded: ${String(err)}`));
-  }, []);
+    getAllConversations(historyDb)
+      .then(setConversations)
+      .catch((err) => setError(`History could not be loaded: ${String(err)}`));
+  }, [historyDb]);
 
   const activeConversation =
     conversations.find((c) => c.id === activeId) ?? null;
 
-  const persist = useCallback((conv: Conversation) => {
-    saveConversation(conv)
-      .then(() =>
-        setConversations((prev) =>
-          [conv, ...prev.filter((c) => c.id !== conv.id)].sort(
-            (a, b) => b.updatedAt - a.updatedAt,
+  const persist = useCallback(
+    (conv: Conversation) => {
+      saveConversation(conv, historyDb)
+        .then(() =>
+          setConversations((prev) =>
+            [conv, ...prev.filter((c) => c.id !== conv.id)].sort(
+              (a, b) => b.updatedAt - a.updatedAt,
+            ),
           ),
-        ),
-      )
-      .catch((err) => setError(`Save failed: ${String(err)}`));
-  }, []);
+        )
+        .catch((err) => setError(`Save failed: ${String(err)}`));
+    },
+    [historyDb],
+  );
 
   const runStream = useCallback(
     async (conv: Conversation, history: StoredMessage[]) => {
-      const request = conversationChatRequest(conv.modelId,history,settingsRef.current);
-      try { serializeChatRequest(request); }
-      catch (err) { setError(err instanceof Error ? err.message : "Check your chat before sending."); return; }
+      const request = conversationChatRequest(
+        conv.modelId,
+        history,
+        settingsRef.current,
+      );
+      try {
+        serializeChatRequest(request);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Check your chat before sending.",
+        );
+        return;
+      }
       const assistant: StoredMessage = {
         id: newId(),
         role: "assistant",
@@ -126,7 +159,8 @@ export function useChat(
 
   const send = useCallback(
     (text: string, attachments: Attachment[] = []) => {
-      if (!selectedModelId || busy || abortRef.current || importingRef.current) return false;
+      if (!selectedModelId || busy || abortRef.current || importingRef.current)
+        return false;
       const userMsg: StoredMessage = {
         id: newId(),
         role: "user",
@@ -149,8 +183,22 @@ export function useChat(
       }
 
       const history = [...conv.messages, userMsg];
-      try { serializeChatRequest(conversationChatRequest(selectedModelId,history,settingsRef.current)); }
-      catch (err) { setError(err instanceof Error ? err.message : "Check your chat before sending."); return false; }
+      try {
+        serializeChatRequest(
+          conversationChatRequest(
+            selectedModelId,
+            history,
+            settingsRef.current,
+          ),
+        );
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Check your chat before sending.",
+        );
+        return false;
+      }
       const updated: Conversation = {
         ...conv,
         modelId: selectedModelId,
@@ -171,7 +219,8 @@ export function useChat(
   }, []);
 
   const regenerate = useCallback(() => {
-    if (!activeConversation || busy || abortRef.current || importingRef.current) return;
+    if (!activeConversation || busy || abortRef.current || importingRef.current)
+      return;
     let lastUserIdx = -1;
     for (let i = activeConversation.messages.length - 1; i >= 0; i--) {
       if (activeConversation.messages[i].role === "user") {
@@ -180,14 +229,28 @@ export function useChat(
       }
     }
     if (lastUserIdx === -1) return;
-    void runStream({...activeConversation,modelId:selectedModelId??activeConversation.modelId}, activeConversation.messages.slice(0, lastUserIdx + 1));
-  }, [activeConversation, busy, runStream,selectedModelId]);
+    void runStream(
+      {
+        ...activeConversation,
+        modelId: selectedModelId ?? activeConversation.modelId,
+      },
+      activeConversation.messages.slice(0, lastUserIdx + 1),
+    );
+  }, [activeConversation, busy, runStream, selectedModelId]);
 
   /** Removes the message (and everything after); returns its text for prefill. */
   const editMessage = useCallback(
     (target: StoredMessage): string | null => {
-      if (!activeConversation || busy || abortRef.current || importingRef.current) return null;
-      const idx = activeConversation.messages.findIndex((m) => m.id === target.id);
+      if (
+        !activeConversation ||
+        busy ||
+        abortRef.current ||
+        importingRef.current
+      )
+        return null;
+      const idx = activeConversation.messages.findIndex(
+        (m) => m.id === target.id,
+      );
       if (idx === -1) return null;
       const kept = activeConversation.messages.slice(0, idx);
       setMessages(kept);
@@ -197,27 +260,42 @@ export function useChat(
     [activeConversation, busy, persist],
   );
 
-  const select = useCallback((id: string) => {
-    if(busy||abortRef.current||importingRef.current){setError("Wait for the current action or stop the reply before switching chats.");return;}
-    if (id === "") {
-      setActiveId(null);
-      setMessages([]);
-      return;
-    }
-    getAllConversations().then((all) => {
-      const conv = all.find((c) => c.id === id);
-      if (conv) {
-        setActiveId(conv.id);
-        setMessages(conv.messages);
-        setConversations(all);
+  const select = useCallback(
+    (id: string) => {
+      if (busy || abortRef.current || importingRef.current) {
+        setError(
+          "Wait for the current action or stop the reply before switching chats.",
+        );
+        return;
       }
-    }).catch(err => setError(`Chat could not be opened: ${String(err)}`));
-  }, [busy]);
+      if (id === "") {
+        setActiveId(null);
+        setMessages([]);
+        return;
+      }
+      getAllConversations(historyDb)
+        .then((all) => {
+          const conv = all.find((c) => c.id === id);
+          if (conv) {
+            setActiveId(conv.id);
+            setMessages(conv.messages);
+            setConversations(all);
+          }
+        })
+        .catch((err) => setError(`Chat could not be opened: ${String(err)}`));
+    },
+    [busy, historyDb],
+  );
 
   const remove = useCallback(
     (id: string) => {
-      if(busy||abortRef.current||importingRef.current){setError("Wait for the current action or stop the reply before removing a chat.");return;}
-      dbDelete(id)
+      if (busy || abortRef.current || importingRef.current) {
+        setError(
+          "Wait for the current action or stop the reply before removing a chat.",
+        );
+        return;
+      }
+      dbDelete(id, historyDb)
         .then(() => setConversations((prev) => prev.filter((c) => c.id !== id)))
         .then(() => {
           if (id === activeId) {
@@ -225,27 +303,33 @@ export function useChat(
             setMessages([]);
           }
         })
-        .catch(err => setError(`Chat could not be deleted: ${String(err)}`));
+        .catch((err) => setError(`Chat could not be deleted: ${String(err)}`));
     },
-    [activeId,busy],
+    [activeId, busy, historyDb],
   );
 
-  const importChat = useCallback(async (text: string) => {
-    if (busy || abortRef.current || importingRef.current) throw Error("Wait for the current action or stop the reply before importing a chat.");
-    const conversation = readChatImport(text);
-    importingRef.current = true;
-    setBusy(true);
-    try {
-      await saveConversation(conversation);
-      setConversations(previous => [conversation, ...previous]);
-      setActiveId(conversation.id);
-      setMessages(conversation.messages);
-      setError(null);
-    } finally {
-      importingRef.current = false;
-      setBusy(false);
-    }
-  }, [busy]);
+  const importChat = useCallback(
+    async (text: string) => {
+      if (busy || abortRef.current || importingRef.current)
+        throw Error(
+          "Wait for the current action or stop the reply before importing a chat.",
+        );
+      const conversation = readChatImport(text);
+      importingRef.current = true;
+      setBusy(true);
+      try {
+        await saveConversation(conversation, historyDb);
+        setConversations((previous) => [conversation, ...previous]);
+        setActiveId(conversation.id);
+        setMessages(conversation.messages);
+        setError(null);
+      } finally {
+        importingRef.current = false;
+        setBusy(false);
+      }
+    },
+    [busy, historyDb],
+  );
 
   return {
     conversations,

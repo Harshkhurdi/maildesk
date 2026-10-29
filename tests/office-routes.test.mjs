@@ -27,7 +27,8 @@ function upload(bytes, name = "Native.docx", revision) {
 }
 async function fixture() {
   const memory = memoryDatabase();
-  let signed = true;
+  let signed = true,
+    userId = "owner";
   const bindings = {
     ...memory.tables,
     ...security,
@@ -45,7 +46,7 @@ async function fixture() {
     uid: () => crypto.randomUUID(),
     guard: async () => {
       if (!signed) throw new HttpError(401, "Sign in");
-      return { user: { userId: "owner" }, db: memory.db };
+      return { user: { userId }, db: memory.db };
     },
   };
   const server = await isolated("../lib/office-server.ts", bindings);
@@ -69,6 +70,9 @@ async function fixture() {
     download,
     create,
     original,
+    setUser(id) {
+      userId = id;
+    },
     signOut() {
       signed = false;
     },
@@ -201,4 +205,48 @@ test("server refuses JSON conversion jobs; browser supplies the native file", as
   );
   assert.equal(r.status, 400);
   assert.equal(f.state.officeFiles.length, 0);
+});
+
+test("guest workspace cannot list, download, rename or save another identity’s native files", async () => {
+  const f = await fixture(),
+    owner = await f.create();
+  f.setUser("guest_isolated");
+  const listing = await (await f.files.GET()).json();
+  assert.deepEqual(listing.files, []);
+  assert.equal(
+    (
+      await f.download.GET(
+        new Request("https://app.example.test/download"),
+        context(owner.id),
+      )
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      await f.patch.PATCH(
+        upload(f.original, "Native.docx", 1),
+        context(owner.id),
+      )
+    ).status,
+    404,
+  );
+  assert.equal(
+    (
+      await f.patch.PATCH(
+        new Request("https://app.example.test/file", {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ title: "Unauthorized" }),
+        }),
+        context(owner.id),
+      )
+    ).status,
+    404,
+  );
+  const response = await f.files.POST(upload(f.original, "Guest.docx"));
+  assert.equal(response.status, 201);
+  assert.notEqual((await response.json()).file.id, owner.id);
+  assert.equal(f.state.officeFiles[0].ownerId, "owner");
+  assert.equal(f.state.officeFiles[1].ownerId, "guest_isolated");
 });

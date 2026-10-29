@@ -19,6 +19,14 @@ The public sign-in and authenticated app now share a Microsoft Office-inspired v
 
 `prepare-production.mjs` applies pending additive migrations only when `VERCEL_ENV=production`. Migration execution uses a transaction/advisory lock and the existing Drizzle journal, supports older manually initialized tables without dropping data, validates the native schema and prevents release on failure. Local/preview builds do not migrate implicitly. PostgreSQL WASM integration verified preservation of an existing file row, native table creation and idempotent reruns; the advisory lock was mocked for that single-process fixture. Four migration unit tests cover success, repeat builds, rollback and additive syntax.
 
+## Full-feature guest access
+
+Added instant guest entry and verified email signup, removing the original owner-only feature gate while keeping all server resource ownership filters. Guests use signed HTTP-only 30-day browser sessions; signup does not allocate a database row or contact Neon. Mail/calendar require each guest’s own Google OAuth grant. Native files, snapshots, connections and backups remain identity-scoped. The original owner’s legacy AI history stays in place; guest/member AI history and settings use separate browser namespaces.
+
+The sign-in recovery/backup link was removed. Guest sign-out clears the guest cookie, and anonymous file API requests return 401 afterward. Email signup and guest workspaces are separate, with no automatic data transfer. No new database migration or scheduled process was added.
+
+Guest tests verify session forgery/expiry rejection, unique/resumable IDs, CSRF and input limits, prior Neon cookie clearing, middleware and route authentication, cross-identity file denial and browser history namespaces. Actual browser tests use the real guest signup/root/AI/sign-out pages and session routes, alongside mocked storage/Google provider boundaries. They cover all five apps, native editing/save/export, email signup UI, isolated AI history and logout. No real OTP email or Google mutation is sent by the tests.
+
 ## Dependencies and license
 
 The browser engine is pinned at `ranuts/document@e975654679d2cc3ef61d67d93fdce2839327676c`. It is AGPL-3.0 and bundles third-party editor/converter components. Original LICENSE/NOTICE, corresponding-source pointers and build instructions are retained in `third_party/browser-office` and the built assets. An English Hunspell/SCOWL dictionary with its COPYRIGHT notice resolves dictionary requests as static files. Review these terms/source-distribution obligations before merging or offering a proprietary hosted derivative; existing repository code has not silently been relicensed. No commercial license is included.
@@ -27,7 +35,7 @@ Existing `docx`, `exceljs`, `pptxgenjs`, `jszip` and XML parsing libraries remai
 
 ## Verification recorded
 
-- Automated tests: **110/110 passing**, zero skipped. Real native file generation and archive validation, owned HTTP upload/download, exact original retention, conflict/concurrent-save behavior, atomic history/deduplication, auth/Google consent boundaries, MIME/calendar policy, sanitization/product scope and existing AI tests.
+- Automated tests: **119/119 passing**, zero skipped. Real native file generation and archive validation, owned HTTP upload/download, exact original retention, conflict/concurrent-save behavior, atomic history/deduplication, auth/Google consent boundaries, MIME/calendar policy, sanitization/product scope and existing AI tests.
 - TypeScript passed. ESLint passed with zero errors and two existing full-navigation advice warnings. Clean production build passed and excludes retired routes.
 - Actual Chromium browser smoke passed with mocked storage/Google APIs. Created Word/Excel/PowerPoint files through the real Web Worker, opened actual bundled editors, entered text/cell/slide edits through keyboard input, saved through the iframe API and inspected exported OOXML for the edited values. Excel and PowerPoint PDF downloads had valid PDF signatures. Deliberate Word storage failure exposed recovery download; retry retained edited content. Idle editor made no save polling requests. Tested versions/AI panel, mail sanitization, reply draft/send, calendar views/event form and 390px mobile Word layout. No real mail/event writes.
 - Production Office API file traces contained **zero** files from `docx`, `exceljs`, `pptxgenjs` or `jszip` packages. Static editor files are not request-time build jobs.
