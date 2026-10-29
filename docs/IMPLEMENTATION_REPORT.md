@@ -10,8 +10,14 @@
 - Owned native uploads/downloads, version 1 originals, atomic versioned saves, revision conflict protection, unchanged-byte deduplication, acknowledgement-based status and failed-upload recovery download.
 - Dirty-only browser autosave after 30 seconds, no editor status polling/heartbeat or continuous retry, metadata-only lists/lookups, cached free-model catalog reused by chat.
 - Gmail mail/label/thread/search/draft/compose/reply/forward/attachment/PDF/status/archive/trash/move flows; multiple accounts and local signatures. Calendar views/timed events/guests/reminders/timezones and ETags.
-- Preserved existing auth/owner gate, token encryption, AI history, legacy files, retired tables and guest data. Disconnect disables credentials without deleting records. No production data mutation occurred.
+- Preserved existing auth/owner gate, token encryption, AI history, legacy files, retired tables and guest data. Disconnect disables credentials without deleting records. Existing app data is not deleted or rewritten. Production builds apply the additive native schema.
 - Removed active calling/messaging/code/task/web utility routes and CodeMirror dependencies. Existing old schema definitions remain for safe recovery.
+
+## Office design and production release
+
+The public sign-in and authenticated app now share a Microsoft Office-inspired visual language: Segoe typography, app-specific blue/green/orange themes, a compact app rail, search, template previews and recent-file list/grid views. All template/import/editor/email actions retain their real implementations. Document generation uses readable Calibri defaults, styled headings and full-width tables.
+
+`prepare-production.mjs` applies pending additive migrations only when `VERCEL_ENV=production`. Migration execution uses a transaction/advisory lock and the existing Drizzle journal, supports older manually initialized tables without dropping data, validates the native schema and prevents release on failure. Local/preview builds do not migrate implicitly. PostgreSQL WASM integration verified preservation of an existing file row, native table creation and idempotent reruns; the advisory lock was mocked for that single-process fixture. Four migration unit tests cover success, repeat builds, rollback and additive syntax.
 
 ## Dependencies and license
 
@@ -21,7 +27,7 @@ Existing `docx`, `exceljs`, `pptxgenjs`, `jszip` and XML parsing libraries remai
 
 ## Verification recorded
 
-- Automated tests: **106/106 passing**, zero skipped. Real native file generation and archive validation, owned HTTP upload/download, exact original retention, conflict/concurrent-save behavior, atomic history/deduplication, auth/Google consent boundaries, MIME/calendar policy, sanitization/product scope and existing AI tests.
+- Automated tests: **110/110 passing**, zero skipped. Real native file generation and archive validation, owned HTTP upload/download, exact original retention, conflict/concurrent-save behavior, atomic history/deduplication, auth/Google consent boundaries, MIME/calendar policy, sanitization/product scope and existing AI tests.
 - TypeScript passed. ESLint passed with zero errors and two existing full-navigation advice warnings. Clean production build passed and excludes retired routes.
 - Actual Chromium browser smoke passed with mocked storage/Google APIs. Created Word/Excel/PowerPoint files through the real Web Worker, opened actual bundled editors, entered text/cell/slide edits through keyboard input, saved through the iframe API and inspected exported OOXML for the edited values. Excel and PowerPoint PDF downloads had valid PDF signatures. Deliberate Word storage failure exposed recovery download; retry retained edited content. Idle editor made no save polling requests. Tested versions/AI panel, mail sanitization, reply draft/send, calendar views/event form and 390px mobile Word layout. No real mail/event writes.
 - Production Office API file traces contained **zero** files from `docx`, `exceljs`, `pptxgenjs` or `jszip` packages. Static editor files are not request-time build jobs.
@@ -32,7 +38,7 @@ Route tests use isolated in-memory database boundaries. They verify behavior and
 
 ## Remaining acceptance work and limits
 
-1. No production migration/deployment or authenticated Vercel preview acceptance was performed. Verify static asset/WASM encoding, isolation headers, existing auth and real PostgreSQL transaction behavior in staging before promotion. Keep existing encryption/auth secrets.
+1. Production builds now run locked, journaled additive migrations using the existing database credentials. Live owner authentication and authorized Google operations still require the owner’s session; they are not replaced by mocked acceptance tests. Keep existing encryption/auth secrets.
 2. Basic real editing and native save were tested in Chromium. This is not complete Microsoft parity: complex pagination, tracked changes/comments, charts/pivots, large-workbook responsiveness, all slide animations/transitions and Microsoft-specific extensions need representative corpus tests. Macros/ActiveX and legacy binary DOC/XLS/PPT imports are not supported.
 3. Native history is a list of downloadable snapshots, not visual per-change history or automatic in-place restore. Import a historical copy as a new file. No collaborative live editing is provided by this local engine.
 4. Snapshots are full copies in PostgreSQL and require storage monitoring. Native files/checkpoints are capped at 3 MB. CSV and mail limits are in README. Browser memory and static bandwidth are material, especially first open/mobile devices; the generated engine is about 510 MB total, loaded on demand in parts.

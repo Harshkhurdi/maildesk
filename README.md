@@ -1,6 +1,6 @@
 # MailDesk
 
-A private workspace with exactly five apps: **Word, Excel, PowerPoint, Outlook and Free AI Studio**. Next.js 16, React 19, TypeScript, existing Neon authentication and PostgreSQL remain the foundation. No Firebase, document-server host, Rust sidecar, cron, background sync, or paid AI is required.
+An Office-inspired private workspace with exactly five apps: **Word, Excel, PowerPoint, Outlook and Free AI Studio**. Next.js 16, React 19, TypeScript, existing Neon authentication and PostgreSQL remain the foundation. No Firebase, document-server host, Rust sidecar, cron, background sync, or paid AI is required.
 
 The [GenOffice](https://github.com/genspark-ai/genoffice) reference informed the native-file workspace and optional AI panel. Its Electron/Rust desktop implementation is not bundled. Office editing uses a pinned [browser Office engine](https://github.com/ranuts/document/tree/e975654679d2cc3ef61d67d93fdce2839327676c), built from its AGPL-3.0 source and served as static assets on Vercel. The mature offline ONLYOFFICE SDK and WebAssembly converter do the work **on the user's machine**. This is not a claim of full Microsoft Office compatibility.
 
@@ -15,7 +15,9 @@ The [GenOffice](https://github.com/genspark-ai/genoffice) reference informed the
 
 Authentication, authorized mail actions and database reads/writes still use Vercel Functions. CPU use cannot be zero or guaranteed under a quota; no production usage benchmark has been measured. Large static downloads use bandwidth and first opens can be slow. The generated editor distribution is roughly 510 MB across many files; it is built once during deployment, not downloaded on every app open.
 
-## Features and preserved data
+## Office workspace and preserved data
+
+Segoe/system typography, a shared app rail and search bar, app-specific colors, working template previews, list/grid file views and a matching public sign-in page. The editor uses the actual native Office ribbon. Outlook has a folder list, message list and reading pane. Template actions create real native files in browser workers.
 
 Native DOCX/XLSX/PPTX creation, templates, uploads, CSV import, file naming, saved copies, historical downloads and conversion of earlier JSON files. Original uploads remain byte-for-byte version 1; edits save a separate native snapshot. A stale tab receives a conflict rather than overwriting newer work. The optional AI panel sends only prompts/files explicitly submitted by the user.
 
@@ -53,7 +55,7 @@ npm run build
 npm run dev
 ```
 
-The migration adds `office_files` and `office_versions` and preserves the old schema. Apply it to staging first. Scripts do not load `.env.local` automatically. No production database migration or deployment was performed during implementation.
+Production Vercel builds apply pending additive migrations before building the app. The migration adds `office_files` and `office_versions`, preserves existing tables/rows, locks concurrent migrations and skips completed journal entries. Older manually initialized installs are adopted using idempotent CREATE statements. A failed migration stops release. Local/preview builds do not auto-migrate; use `npm run db:migrate` with explicit environment variables for staging. Scripts do not load `.env.local` automatically. No migration runs during a request.
 
 Deploy using the existing Next.js Vercel project, `npm ci` and `npm run build`. `prebuild` fetches a pinned editor source commit, installs its frozen lockfile using pnpm 11.4.0 and builds/copies static assets into ignored `public/office`. This requires build-time access to GitHub and npm. Build cache is under `.cache`. Generated assets and nested dependencies are excluded from Git, TypeScript and ESLint. See [the build script](scripts/prepare-browser-office.mjs). No vendor installation/build runs in a request handler.
 

@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import type { CSSProperties } from "react";
+import { AppIcon, TemplatePreview } from "./office-brand";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -7,12 +9,17 @@ import {
   FileText,
   FolderOpen,
   LayoutGrid,
+  List,
+  Grid2X2,
+  Cloud,
+  ChevronRight,
+  Clock3,
+  FilePlus2,
   Plus,
   RefreshCw,
   Search,
   Settings,
   Pencil,
-  ShieldCheck,
   Upload,
   X,
 } from "lucide-react";
@@ -56,7 +63,8 @@ export default function Maildesk() {
     [title, setTitle] = useState(""),
     [permissions, setPermissions] = useState({ mail: false, calendar: false }),
     [showLegacy, setShowLegacy] = useState(false);
-  const [template, setTemplate] = useState("blank");
+  const [template, setTemplate] = useState("blank"),
+    [view, setView] = useState<"list" | "grid">("list");
   const upload = useRef<HTMLInputElement>(null);
   const reload = useCallback(async () => {
     setLoading(true);
@@ -191,6 +199,21 @@ export default function Maildesk() {
         f.kind === active &&
         f.title.toLowerCase().includes(query.toLowerCase()),
     );
+  const kind = active as FileKind,
+    fileNoun =
+      active === "document"
+        ? "document"
+        : active === "sheet"
+          ? "workbook"
+          : "presentation";
+  function beginCreate(id = "blank") {
+    setTemplate(id);
+    const chosen = OFFICE_TEMPLATES[kind]?.find((t) => t.id === id);
+    setTitle(
+      id === "blank" ? `Untitled ${fileNoun}` : (chosen?.name ?? "Untitled"),
+    );
+    setCreate(true);
+  }
   if (open)
     return (
       <OfficeEditor
@@ -203,34 +226,37 @@ export default function Maildesk() {
       />
     );
   return (
-    <div className="suite-shell">
-      <aside className="suite-sidebar">
-        <Link className="suite-brand" href="/">
-          <span className="suite-logo">m.</span>
-          <div>
-            MailDesk<small>A place for your best work</small>
-          </div>
+    <div
+      className="suite-shell office-shell"
+      style={{ "--app-accent": app.color } as CSSProperties}
+    >
+      <header className="office-topbar">
+        <Link href="/" className="office-brand" aria-label="MailDesk home">
+          <LayoutGrid size={22} />
+          <strong>MailDesk</strong>
+          <span className="office-brand-divider" />
+          <span>{app.name}</span>
         </Link>
-        <div className="suite-sidebar-label">YOUR WORKSPACE</div>
-        <SuiteNav active={active} onSelect={select} />
-        <div className="suite-sidebar-bottom">
-          <button onClick={() => setSettings(true)}>
-            <Settings size={17} />
-            Settings & accounts
+        {active !== "outlook" && (
+          <label className="office-global-search">
+            <Search size={17} />
+            <input
+              aria-label="Find files"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={`Search your ${fileNoun}s`}
+            />
+            <kbd>Search</kbd>
+          </label>
+        )}
+        <div className="office-top-actions">
+          <button
+            aria-label="Settings and accounts"
+            title="Settings and accounts"
+            onClick={() => setSettings(true)}
+          >
+            <Settings size={19} />
           </button>
-          <a href="/auth/sign-out">Sign out</a>
-          <p>
-            <ShieldCheck size={14} />
-            Private by design
-          </p>
-        </div>
-      </aside>
-      <main className="suite-main">
-        <header className="suite-topbar">
-          <span>
-            <LayoutGrid size={17} />
-            Productivity, with a little room to breathe.
-          </span>
           <button
             className="suite-avatar"
             aria-label="Open account settings"
@@ -238,7 +264,25 @@ export default function Maildesk() {
           >
             {workspace?.userName?.slice(0, 1).toUpperCase() ?? "M"}
           </button>
-        </header>
+        </div>
+      </header>
+      <aside className="suite-sidebar">
+        <SuiteNav active={active} onSelect={select} />
+        <div className="suite-sidebar-bottom">
+          <button
+            aria-label="Settings & accounts"
+            title="Settings & accounts"
+            onClick={() => setSettings(true)}
+          >
+            <Settings size={20} />
+            <span>Settings</span>
+          </button>
+          <a href="/auth/sign-out" title="Sign out">
+            Sign out
+          </a>
+        </div>
+      </aside>
+      <main className="suite-main">
         {error && (
           <div role="alert" className="suite-error">
             {error}
@@ -251,22 +295,92 @@ export default function Maildesk() {
           <OutlookWorkspace onSettings={() => setSettings(true)} />
         ) : (
           <div className="suite-library">
+            <div className="office-breadcrumb">
+              <span>My workspace</span>
+              <ChevronRight size={13} />
+              <span>{app.name}</span>
+            </div>
             <div className="suite-page-heading">
               <div>
-                <p className="suite-eyebrow">MAKE SOMETHING THAT MATTERS</p>
+                <p className="suite-eyebrow">
+                  YOUR IDEAS, READY FOR WHAT’S NEXT
+                </p>
                 <h1>
                   MailDesk {app.name}
-                  <span style={{ color: app.color }}>.</span>
+                  <span className="heading-punctuation">.</span>
                 </h1>
-                <p>{app.description}</p>
+                <p>
+                  {active === "document"
+                    ? "Create something worth sharing."
+                    : active === "sheet"
+                      ? "Turn your data into decisions."
+                      : "Bring your next big idea to life."}
+                </p>
               </div>
-              <span
-                className="suite-app-mark"
-                style={{ background: app.color }}
-              >
-                {app.letter}
-              </span>
+              <AppIcon kind={active} size={64} />
             </div>
+            <div className="office-section-heading">
+              <h2>Start something new</h2>
+              <span>Made for your next {fileNoun}</span>
+            </div>
+            <div className="office-template-gallery">
+              {OFFICE_TEMPLATES[kind].map((t) => (
+                <button
+                  key={t.id}
+                  className="office-template-card"
+                  disabled={busy}
+                  onClick={() => beginCreate(t.id)}
+                  aria-label={
+                    t.id === "blank"
+                      ? `Create a blank ${fileNoun}`
+                      : `Create ${t.name}`
+                  }
+                >
+                  <TemplatePreview kind={active} template={t.id} />
+                  <span>
+                    <AppIcon kind={active} size={22} />
+                    <strong>{t.name}</strong>
+                  </span>
+                </button>
+              ))}
+              <button
+                className="office-upload-tile"
+                disabled={busy}
+                onClick={() => upload.current?.click()}
+              >
+                <div>
+                  <Upload size={28} />
+                  <strong>Open from this device</strong>
+                  <span>Pick up where you left off</span>
+                </div>
+                <small>
+                  {active === "document"
+                    ? "DOCX"
+                    : active === "sheet"
+                      ? "XLSX · CSV"
+                      : "PPTX"}{" "}
+                  files · up to 3 MB
+                </small>
+              </button>
+            </div>
+            <input
+              hidden
+              ref={upload}
+              type="file"
+              aria-label="Import Office file"
+              accept={
+                active === "document"
+                  ? ".docx"
+                  : active === "sheet"
+                    ? ".xlsx,.csv"
+                    : ".pptx"
+              }
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) void importFile(file);
+              }}
+            />
             {!configured && !loading && (
               <div className="office-setup-banner">
                 <FolderOpen size={21} />
@@ -286,89 +400,48 @@ export default function Maildesk() {
                 </button>
               </div>
             )}
-            <div className="suite-start-row">
-              <button
-                className="new-file-card"
-                disabled={busy}
-                onClick={() => {
-                  setTemplate("blank");
-                  setTitle(
-                    `Untitled ${app.name === "Word" ? "document" : app.name === "Excel" ? "workbook" : "presentation"}`,
-                  );
-                  setCreate(true);
-                }}
-              >
-                <div className="blank-file">
-                  <Plus size={30} />
-                </div>
-                <strong>
-                  Create a blank{" "}
-                  {app.name === "Word"
-                    ? "document"
-                    : app.name === "Excel"
-                      ? "workbook"
-                      : "presentation"}
-                </strong>
-                <small>A fresh place to start</small>
-              </button>
-              <button
-                className="import-file-card"
-                disabled={busy}
-                onClick={() => upload.current?.click()}
-              >
-                <Upload size={26} />
-                <strong>Open from your device</strong>
-                <small>
-                  {active === "document"
-                    ? "DOCX"
-                    : active === "sheet"
-                      ? "XLSX / CSV"
-                      : "PPTX"}{" "}
-                  · up to 3 MB · original retained
-                </small>
-              </button>
-              <input
-                hidden
-                ref={upload}
-                type="file"
-                aria-label="Import Office file"
-                accept={
-                  active === "document"
-                    ? ".docx"
-                    : active === "sheet"
-                      ? ".xlsx,.csv"
-                      : ".pptx"
-                }
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  e.target.value = "";
-                  if (f) void importFile(f);
-                }}
-              />
-            </div>
             <div className="suite-file-heading">
-              <h2>
-                Your{" "}
-                {active === "document"
-                  ? "documents"
-                  : active === "sheet"
-                    ? "workbooks"
-                    : "presentations"}
-                <span>{visible.length}</span>
-              </h2>
+              <div className="office-file-tabs">
+                <span className="active">
+                  <Clock3 size={16} />
+                  Recent
+                </span>
+                <span>
+                  Your {fileNoun}s <b>{visible.length}</b>
+                </span>
+              </div>
               <div>
-                <label className="suite-file-search">
-                  <Search size={15} />
-                  <input
-                    aria-label="Find files"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Find a file…"
-                  />
-                </label>
+                <button
+                  className="suite-button"
+                  disabled={busy}
+                  onClick={() => beginCreate()}
+                >
+                  <Plus size={16} />
+                  New {fileNoun}
+                </button>
+                <div
+                  className="office-view-switch"
+                  role="group"
+                  aria-label="File view"
+                >
+                  <button
+                    aria-label="List view"
+                    aria-pressed={view === "list"}
+                    onClick={() => setView("list")}
+                  >
+                    <List size={18} />
+                  </button>
+                  <button
+                    aria-label="Grid view"
+                    aria-pressed={view === "grid"}
+                    onClick={() => setView("grid")}
+                  >
+                    <Grid2X2 size={17} />
+                  </button>
+                </div>
                 <button
                   aria-label="Refresh files"
-                  className="suite-button"
+                  className="suite-button icon-only"
                   disabled={loading}
                   onClick={() => void reload()}
                 >
@@ -379,22 +452,39 @@ export default function Maildesk() {
             {loading ? (
               <p role="status">Loading saved work…</p>
             ) : visible.length ? (
-              <div className="suite-file-grid">
+              <div className={`suite-file-grid office-files-${view}`}>
+                <div className="office-list-head">
+                  <span>Name</span>
+                  <span>Last modified</span>
+                  <span>Version</span>
+                  <span>Actions</span>
+                </div>
                 {visible.map((file) => (
                   <article className="suite-file-card" key={file.id}>
                     <button className="file-open" onClick={() => setOpen(file)}>
-                      <div
-                        className="file-preview"
-                        style={{ color: app.color }}
-                      >
-                        <FileText size={38} />
-                        <span>{file.extension.toUpperCase()}</span>
+                      <div className="file-preview">
+                        <TemplatePreview
+                          kind={file.kind}
+                          template={
+                            file.kind === "document"
+                              ? "report"
+                              : file.kind === "sheet"
+                                ? "budget"
+                                : "project"
+                          }
+                        />
                       </div>
+                      <AppIcon kind={file.kind} size={34} />
                       <strong>{file.title}</strong>
                       <small>
-                        Updated {new Date(file.updatedAt).toLocaleDateString()}{" "}
-                        · version {file.revision}
+                        {new Date(file.updatedAt).toLocaleDateString(
+                          undefined,
+                          { month: "short", day: "numeric", year: "numeric" },
+                        )}
                       </small>
+                      <span className="office-file-version">
+                        v{file.revision}
+                      </span>
                     </button>
                     <button
                       className="file-rename"
@@ -435,9 +525,17 @@ export default function Maildesk() {
               </div>
             ) : (
               <div className="suite-empty files-empty">
-                <FileText size={32} />
-                <h3>Your next idea starts here.</h3>
-                <p>Create a file or open one from your device.</p>
+                <div className="office-empty-icon">
+                  <FilePlus2 size={34} />
+                </div>
+                <h3>
+                  {query ? "No matching files" : "Your work will appear here"}
+                </h3>
+                <p>
+                  {query
+                    ? "Try another file name."
+                    : `Create a ${fileNoun} from a template above, or open a file from your device.`}
+                </p>
               </div>
             )}
             {workspace?.legacyFiles.some((f) => f.kind === active) && (
@@ -487,8 +585,10 @@ export default function Maildesk() {
           </div>
         )}
         <footer className="suite-footer">
-          A quieter place to get things done.
-          <span>MailDesk · Your private workspace</span>
+          <span>
+            <Cloud size={14} /> Your private workspace
+          </span>
+          <span>Word · Excel · PowerPoint · Outlook · Free AI Studio</span>
         </footer>
       </main>
       {create && (
@@ -504,7 +604,7 @@ export default function Maildesk() {
             }}
           >
             <header>
-              <h2>A fresh start.</h2>
+              <h2>New {fileNoun}</h2>
               <button
                 type="button"
                 aria-label="Close new file"

@@ -2,10 +2,10 @@
 :root {
   --bg: #f8f9f6;
   --white: #fff;
-  --ink: #23322e;
-  --muted: #7a847e;
+  --ink: #2f2f2f;
+  --muted: #818181;
   --line: #e7ebe5;
-  --green: #285b49;
+  --green: #0f6cbd;
   --sage: #eef3ec;
   --amber: #a56d21;
   --coral: #b36555;
@@ -58,13 +58,13 @@ a {
 }
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid #a2bba7;
+  outline: 3px solid #b4b4b4;
   outline-offset: 3px;
 }
 input:focus,
 textarea:focus,
 select:focus {
-  outline: 2px solid #9fb5a6;
+  outline: 2px solid #afafaf;
   outline-offset: 0;
 }
 input,
@@ -95,7 +95,7 @@ svg {
   border-radius: 13px;
 }
 .auth-card h1 {
-  font-family: Georgia, serif;
+  font-family: "Segoe UI", Arial, sans-serif;
   font-size: 34px;
   font-weight: 400;
   margin: 30px 0 12px;
@@ -137,20 +137,20 @@ svg {
   width: 35px;
   height: 35px;
   border-radius: 9px;
-  background: #285b49;
+  background: #0f6cbd;
   color: white;
   display: grid;
   place-items: center;
 }
 .brand-dot {
-  color: #829d6b;
+  color: #949494;
 }
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border: 1px solid #dce4d4;
+  border: 1px solid #e1e1e1;
   border-radius: 7px;
   padding: 10px 13px;
   font-size: 11px;
@@ -158,9 +158,9 @@ svg {
   min-height: 36px;
 }
 .button.primary {
-  background: #285b49;
+  background: #0f6cbd;
   color: white;
-  border-color: #285b49;
+  border-color: #0f6cbd;
 }
 .button.small {
   padding: 7px 10px;
@@ -168,11 +168,11 @@ svg {
   min-height: 30px;
 }
 .text-button {
-  color: #6c855b;
+  color: #7d7d7d;
   font-size: 11px;
 }
 .utility-muted {
-  color: #829176;
+  color: #8c8c8c;
 }
 .utility-error {
   padding: 12px;
@@ -183,7 +183,7 @@ svg {
 .eyebrow {
   font-size: 9px;
   letter-spacing: 1.6px;
-  color: #8b9786;
+  color: #939393;
 }
 .spinning {
   animation: maildesk-spin 1s linear infinite;
@@ -196,7 +196,7 @@ svg {
 /* Private PDF reader */
 .pdf-viewer {
   background: white;
-  border: 1px solid #e1e8d9;
+  border: 1px solid #e5e5e5;
   border-radius: 11px;
   overflow: hidden;
 }
@@ -209,7 +209,7 @@ svg {
   gap: 5px;
   flex-wrap: wrap;
   padding: 13px 16px;
-  border-bottom: 1px solid #e7ecdf;
+  border-bottom: 1px solid #eaeaea;
   min-height: 61px;
 }
 .pdf-filename {
@@ -219,11 +219,11 @@ svg {
   text-overflow: ellipsis;
   white-space: nowrap;
   margin: 0 8px;
-  color: #607753;
+  color: #707070;
 }
 .pdf-toolbar-divider {
   height: 20px;
-  border-right: 1px solid #e1e9d7;
+  border-right: 1px solid #e6e6e6;
   margin: 0 6px;
 }
 .pdf-toolbar-spacer {
@@ -236,27 +236,27 @@ svg {
   width: 30px;
   height: 30px;
   border-radius: 5px;
-  color: #7b926b;
+  color: #8a8a8a;
 }
 .pdf-tool:hover,
 .pdf-tool.active {
-  background: #edf3e5;
-  color: #3c6731;
+  background: #f1f1f1;
+  color: #5a5a5a;
 }
 .pdf-page-control {
   display: flex;
   gap: 6px;
   align-items: center;
   font-size: 10px;
-  color: #8da17b;
+  color: #9a9a9a;
 }
 .pdf-page-control input {
   width: 42px;
   text-align: center;
-  border: 1px solid #dfe8d4;
+  border: 1px solid #e5e5e5;
   border-radius: 5px;
   padding: 5px 2px;
-  color: #647e51;
+  color: #757575;
   font-size: 11px;
   appearance: textfield;
 }
@@ -264,11 +264,11 @@ svg {
   appearance: none;
 }
 .pdf-zoom {
-  border: 1px solid #dfe8d4;
+  border: 1px solid #e5e5e5;
   border-radius: 5px;
   padding: 6px 5px;
   font-size: 10px;
-  color: #6c855a;
+  color: #7d7d7d;
   background: white;
   width: 86px;
 }
@@ -305,9 +305,9 @@ svg {
   display: grid;
   place-items: center;
   background: #fafcf7;
-  border: 1px solid #dfe8d4;
+  border: 1px solid #e5e5e5;
   border-radius: 13px;
-  color: #8fa57d;
+  color: #9d9d9d;
   box-shadow: 0 8px 25px #47603208;
   transform: rotate(-6deg);
   margin-bottom: 29px;
@@ -317,17 +317,17 @@ svg {
   letter-spacing: 1.3px;
 }
 .pdf-empty h2 {
-  font-family: Georgia, serif;
+  font-family: "Segoe UI", Arial, sans-serif;
   font-size: 32px;
   font-weight: 400;
   letter-spacing: -0.8px;
-  color: #455d3e;
+  color: #565656;
   margin: 14px 0;
 }
 .pdf-empty > p:not(.eyebrow) {
   font-size: 12px;
   line-height: 1.8;
-  color: #7c8d70;
+  color: #878787;
   margin-bottom: 23px;
 }
 .pdf-private {
@@ -335,7 +335,7 @@ svg {
   align-items: center;
   gap: 6px;
   font-size: 9px;
-  color: #8a9d7b;
+  color: #979797;
   margin-top: 18px;
 }
 .pdf-page {
@@ -360,20 +360,20 @@ svg {
 .pdf-page-link:hover,
 .pdf-page-link:focus-visible {
   background: #a5c48b33;
-  outline: 1px solid #7b9d60;
+  outline: 1px solid #919191;
 }
 .pdf-rendering {
   position: absolute;
   right: 12px;
   top: 12px;
   background: #f4f8eeed;
-  border: 1px solid #dbe7ce;
+  border: 1px solid #e3e3e3;
   border-radius: 6px;
   display: flex;
   align-items: center;
   gap: 7px;
   padding: 8px 10px;
-  color: #7c9668;
+  color: #8d8d8d;
   font-size: 10px;
   z-index: 3;
 }
@@ -384,7 +384,7 @@ svg {
   justify-content: center;
   flex-direction: column;
   gap: 15px;
-  color: #80966e;
+  color: #8e8e8e;
   font-size: 12px;
   text-align: center;
 }
@@ -395,8 +395,8 @@ svg {
   gap: 12px;
   padding: 13px 17px;
   font-size: 9px;
-  color: #819775;
-  border-top: 1px solid #e3ebd9;
+  color: #909090;
+  border-top: 1px solid #e8e8e8;
 }
 .pdf-footer > span {
   display: flex;
@@ -422,18 +422,18 @@ svg {
   align-items: center;
   flex-direction: column;
   text-align: center;
-  color: #7f986c;
+  color: #909090;
 }
 .pdf-password h2 {
-  font-family: Georgia, serif;
+  font-family: "Segoe UI", Arial, sans-serif;
   font-size: 25px;
   font-weight: 400;
-  color: #526d42;
+  color: #646464;
   margin: 20px 0 12px;
 }
 .pdf-password p {
   font-size: 11px;
-  color: #92a580;
+  color: #9e9e9e;
   line-height: 1.8;
 }
 .pdf-password label {
@@ -446,11 +446,11 @@ svg {
   width: 100%;
 }
 .pdf-password input {
-  border: 1px solid #d5e1c9;
+  border: 1px solid #dddddd;
   background: #fff;
   border-radius: 6px;
   padding: 12px;
-  color: #567843;
+  color: #6d6d6d;
   width: 100%;
 }
 .pdf-drop-overlay {
@@ -463,29 +463,29 @@ svg {
   gap: 15px;
   z-index: 5;
   background: #ecf5e6ed;
-  border: 2px dashed #92ae7d;
-  color: #6c8d54;
+  border: 2px dashed #a5a5a5;
+  color: #828282;
   pointer-events: none;
 }
 .pdf-search-panel,
 .pdf-text-panel {
   width: 240px;
   flex-shrink: 0;
-  border-right: 1px solid #e0e9d5;
+  border-right: 1px solid #e6e6e6;
   overflow: auto;
   padding: 17px;
   background: #fcfdf9;
 }
 .pdf-text-panel {
   border-right: 0;
-  border-left: 1px solid #e0e9d5;
+  border-left: 1px solid #e6e6e6;
 }
 .pdf-search-heading {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 11px;
-  color: #627f4f;
+  color: #757575;
   margin-bottom: 15px;
 }
 .pdf-search-heading strong {
@@ -494,17 +494,17 @@ svg {
 .pdf-search-heading button {
   display: grid;
   place-items: center;
-  color: #91a57e;
+  color: #9e9e9e;
 }
 .pdf-search-input {
   display: flex;
   align-items: center;
   gap: 7px;
   padding: 8px;
-  border: 1px solid #dce7d1;
+  border: 1px solid #e3e3e3;
   border-radius: 6px;
   background: #fff;
-  color: #8ca278;
+  color: #9a9a9a;
 }
 .pdf-search-input input {
   border: 0;
@@ -512,11 +512,11 @@ svg {
   min-width: 0;
   width: 100%;
   font-size: 11px;
-  color: #627f4e;
+  color: #757575;
 }
 .pdf-search-summary {
   font-size: 9px;
-  color: #8a9f78;
+  color: #989898;
   line-height: 1.7;
   margin: 11px 0;
 }
@@ -525,35 +525,35 @@ svg {
   text-align: left;
   width: 100%;
   padding: 12px 10px;
-  border: 1px solid #e5ecdc;
+  border: 1px solid #e9e9e9;
   border-radius: 6px;
   margin: 9px 0;
   background: white;
 }
 .pdf-search-result.active {
-  background: #eff5e8;
-  border-color: #bcccac;
+  background: #f3f3f3;
+  border-color: #c6c6c6;
 }
 .pdf-search-result > span {
   font-size: 9px;
-  color: #7b9765;
+  color: #8d8d8d;
 }
 .pdf-search-result > p {
   font-size: 10px;
-  color: #8b9f7b;
+  color: #989898;
   line-height: 1.7;
   margin-top: 7px;
   overflow-wrap: anywhere;
 }
 .pdf-search-note {
   font-size: 10px;
-  color: #9cad8b;
+  color: #a7a7a7;
   line-height: 1.8;
   padding-top: 12px;
 }
 .pdf-text-panel > p {
   font-size: 11px;
-  color: #7c946b;
+  color: #8c8c8c;
   white-space: pre-wrap;
   line-height: 1.9;
   overflow-wrap: anywhere;
@@ -566,7 +566,7 @@ svg {
   margin-left: auto;
 }
 .attachment-list > span > small {
-  color: #9dac8d;
+  color: #a7a7a7;
   font-size: 9px;
   margin-left: auto;
 }
@@ -601,13 +601,13 @@ svg {
     width: 100%;
     max-height: 210px;
     border-right: 0;
-    border-bottom: 1px solid #e1e9d7;
+    border-bottom: 1px solid #e6e6e6;
   }
   .pdf-text-panel {
     width: 100%;
     max-height: 190px;
     border-left: 0;
-    border-top: 1px solid #e1e9d7;
+    border-top: 1px solid #e6e6e6;
   }
   .pdf-stage {
     min-height: 280px;
@@ -719,7 +719,7 @@ svg {
 .suite-shell {
   min-height: 100vh;
   background: #f8f9f6;
-  color: #23352d;
+  color: #313131;
 }
 .suite-sidebar {
   position: fixed;
@@ -729,7 +729,7 @@ svg {
   flex-direction: column;
   padding: 32px 20px 22px;
   background: #eef1e9;
-  border-right: 1px solid #dfe5da;
+  border-right: 1px solid #e3e3e3;
   z-index: 15;
 }
 .suite-brand {
@@ -743,7 +743,7 @@ svg {
 .suite-brand small {
   display: block;
   font-size: 9px;
-  color: #7d8977;
+  color: #858585;
   letter-spacing: 0.1px;
   margin-top: 5px;
   font-weight: 400;
@@ -754,15 +754,15 @@ svg {
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: #285b49;
+  background: #0f6cbd;
   color: #fff;
-  font-family: Georgia, serif;
+  font-family: "Segoe UI", Arial, sans-serif;
   font-size: 30px;
 }
 .suite-sidebar-label {
   font-size: 9px;
   letter-spacing: 1.8px;
-  color: #7b8a73;
+  color: #858585;
   margin: 48px 10px 16px;
 }
 .suite-nav {
@@ -777,15 +777,15 @@ svg {
   padding: 11px 12px;
   border-radius: 8px;
   font-size: 12px;
-  color: #62725a;
+  color: #6d6d6d;
   font-weight: 500;
 }
 .suite-nav a:hover {
-  background: #e4ebdd;
+  background: #e9e9e9;
 }
 .suite-nav a.active {
-  background: #dce6d3;
-  color: #264d39;
+  background: #e3e3e3;
+  color: #0f6cbd;
 }
 .app-letter {
   display: grid;
@@ -801,7 +801,7 @@ svg {
 .suite-sidebar-bottom {
   margin-top: auto;
   padding: 40px 10px 0;
-  color: #718169;
+  color: #7c7c7c;
   font-size: 11px;
 }
 .suite-sidebar-bottom button {
@@ -820,7 +820,7 @@ svg {
   align-items: center;
   font-size: 9px;
   padding-top: 28px;
-  color: #8b997f;
+  color: #949494;
 }
 .suite-main {
   margin-left: 238px;
@@ -836,7 +836,7 @@ svg {
   align-items: center;
   justify-content: space-between;
   padding: 0 40px;
-  border-bottom: 1px solid #e4e9df;
+  border-bottom: 1px solid #e7e7e7;
   background: #fcfdfa;
 }
 .suite-topbar > span {
@@ -844,11 +844,11 @@ svg {
   align-items: center;
   gap: 10px;
   font-size: 10px;
-  color: #829078;
+  color: #8b8b8b;
 }
 .suite-avatar {
   border: 3px solid white;
-  box-shadow: 0 0 0 1px #e2e7dc;
+  box-shadow: 0 0 0 1px #e5e5e5;
   border-radius: 50%;
   width: 32px;
   height: 32px;
@@ -875,10 +875,10 @@ svg {
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 1.8px;
-  color: #7d8e73;
+  color: #888888;
 }
 .suite-page-heading h1 {
-  font-family: Georgia, serif;
+  font-family: "Segoe UI", Arial, sans-serif;
   font-size: 43px;
   font-weight: 400;
   letter-spacing: -1.7px;
@@ -886,7 +886,7 @@ svg {
 }
 .suite-page-heading > div > p:last-child {
   font-size: 12px;
-  color: #7b8972;
+  color: #848484;
 }
 .suite-app-mark {
   display: grid;
@@ -903,7 +903,7 @@ svg {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border: 1px solid #dce3d6;
+  border: 1px solid #e1e1e1;
   background: #fff;
   border-radius: 7px;
   padding: 9px 12px;
@@ -914,21 +914,21 @@ svg {
   min-height: 35px;
 }
 .suite-button:hover {
-  background: #f0f5eb;
-  border-color: #bccdb1;
+  background: #f3f3f3;
+  border-color: #c7c7c7;
 }
 .suite-button.primary {
-  background: #285b49;
-  border-color: #285b49;
+  background: #0f6cbd;
+  border-color: #0f6cbd;
   color: #fff;
 }
 .suite-button.primary:hover {
-  background: #214e3c;
+  background: #115ea3;
 }
 .suite-button.selected {
-  background: #e4eddd;
-  color: #285b49;
-  border-color: #bed0b1;
+  background: #eaeaea;
+  color: #0f6cbd;
+  border-color: #cacaca;
 }
 .suite-button.danger {
   color: #a54d3d;
@@ -944,7 +944,7 @@ svg {
 .new-file-card,
 .import-file-card {
   width: 235px;
-  border: 1px solid #e0e6d9;
+  border: 1px solid #e4e4e4;
   border-radius: 11px;
   background: #fff;
   padding: 20px;
@@ -957,18 +957,18 @@ svg {
 }
 .new-file-card:hover,
 .import-file-card:hover {
-  border-color: #a9bea0;
+  border-color: #b7b7b7;
   transform: translateY(-2px);
 }
 .blank-file {
   width: 73px;
   height: 87px;
-  border: 1px solid #dae4d2;
+  border: 1px solid #e1e1e1;
   border-radius: 4px;
   background: #fbfdf9;
   display: grid;
   place-items: center;
-  color: #8da57c;
+  color: #9d9d9d;
   margin-bottom: 20px;
 }
 .new-file-card strong,
@@ -980,15 +980,15 @@ svg {
 .new-file-card small,
 .import-file-card small {
   font-size: 9px;
-  color: #85927b;
+  color: #8e8e8e;
   margin-top: 5px;
   line-height: 1.6;
 }
 .import-file-card {
-  background: #f1f5eb;
+  background: #f3f3f3;
   border-style: dashed;
   justify-content: center;
-  color: #5d7850;
+  color: #6f6f6f;
 }
 .import-file-card > svg {
   margin-bottom: 22px;
@@ -1021,7 +1021,7 @@ svg {
   align-items: center;
   gap: 12px;
   padding-bottom: 19px;
-  border-bottom: 1px solid #e0e7d9;
+  border-bottom: 1px solid #e5e5e5;
   margin-bottom: 22px;
 }
 .suite-file-heading h2 {
@@ -1030,10 +1030,10 @@ svg {
 }
 .suite-file-heading h2 > span {
   font-size: 10px;
-  background: #e9efe1;
+  background: #ededed;
   padding: 3px 6px;
   border-radius: 4px;
-  color: #779064;
+  color: #888888;
   margin-left: 9px;
 }
 .suite-file-heading > div {
@@ -1044,11 +1044,11 @@ svg {
   display: flex;
   gap: 8px;
   align-items: center;
-  border: 1px solid #e0e6da;
+  border: 1px solid #e4e4e4;
   padding: 7px 9px;
   border-radius: 7px;
   background: white;
-  color: #8b9a7d;
+  color: #959595;
 }
 .suite-file-search input {
   border: 0;
@@ -1065,7 +1065,7 @@ svg {
 .suite-file-card {
   position: relative;
   min-width: 0;
-  border: 1px solid #e0e6d9;
+  border: 1px solid #e4e4e4;
   border-radius: 9px;
   background: #fff;
   overflow: hidden;
@@ -1089,13 +1089,13 @@ svg {
 .file-open small {
   display: block;
   font-size: 9px;
-  color: #8a977f;
+  color: #939393;
   margin-top: 7px;
 }
 .file-preview {
   height: 117px;
-  background: linear-gradient(130deg, #f7f9f4, #edf2e7);
-  border: 1px solid #e9eee2;
+  background: linear-gradient(130deg, #f7f9f4, #f0f0f0);
+  border: 1px solid #ececec;
   border-radius: 5px;
   display: flex;
   align-items: center;
@@ -1113,7 +1113,7 @@ svg {
   right: 14px;
   bottom: 38px;
   padding: 5px;
-  color: #819872;
+  color: #909090;
 }
 .suite-empty {
   padding: 65px 25px;
@@ -1123,25 +1123,25 @@ svg {
   align-items: center;
   justify-content: center;
   gap: 14px;
-  color: #8a9a7d;
+  color: #959595;
   min-height: 280px;
 }
 .suite-empty h2,
 .suite-empty h3 {
-  font-family: Georgia, serif;
+  font-family: "Segoe UI", Arial, sans-serif;
   font-weight: 400;
   letter-spacing: -0.5px;
-  color: #516347;
+  color: #5d5d5d;
   font-size: 24px;
 }
 .suite-empty p {
   font-size: 12px;
   line-height: 1.8;
   max-width: 460px;
-  color: #7e8c72;
+  color: #878787;
 }
 .files-empty {
-  border: 1px dashed #dce5d3;
+  border: 1px dashed #e2e2e2;
   border-radius: 9px;
   background: #fafcf7;
 }
@@ -1150,8 +1150,8 @@ svg {
   justify-content: space-between;
   padding: 22px 40px;
   font-size: 9px;
-  color: #95a189;
-  border-top: 1px solid #e4e9de;
+  color: #9d9d9d;
+  border-top: 1px solid #e7e7e7;
   margin-top: auto;
   gap: 16px;
 }
@@ -1172,9 +1172,9 @@ svg {
   overflow-wrap: anywhere;
 }
 .suite-notice {
-  border-color: #d4e1c5;
-  background: #f0f6e9;
-  color: #507438;
+  border-color: #dcdcdc;
+  background: #f4f4f4;
+  color: #0f6cbd;
 }
 .suite-error > button,
 .suite-notice > button {
@@ -1193,7 +1193,7 @@ svg {
 }
 .suite-dialog {
   background: #fff;
-  border: 1px solid #e2e7db;
+  border: 1px solid #e5e5e5;
   border-radius: 14px;
   box-shadow: 0 24px 80px #1c342a25;
   padding: 28px;
@@ -1211,7 +1211,7 @@ svg {
   margin-bottom: 20px;
 }
 .suite-dialog h2 {
-  font-family: Georgia, serif;
+  font-family: "Segoe UI", Arial, sans-serif;
   font-size: 26px;
   letter-spacing: -0.6px;
   font-weight: 400;
@@ -1223,7 +1223,7 @@ svg {
 }
 .suite-dialog p {
   font-size: 12px;
-  color: #7e8c74;
+  color: #878787;
   margin: 10px 0 15px;
 }
 .suite-dialog label {
@@ -1231,19 +1231,19 @@ svg {
   flex-direction: column;
   gap: 6px;
   font-size: 11px;
-  color: #596c4e;
+  color: #666666;
   margin: 11px 0;
 }
 .suite-dialog input,
 .suite-dialog textarea,
 .suite-dialog select {
-  border: 1px solid #dce4d4;
+  border: 1px solid #e1e1e1;
   background: #fafcf7;
   border-radius: 6px;
   padding: 9px 11px;
   width: 100%;
   font-size: 12px;
-  color: #32472c;
+  color: #414141;
 }
 .suite-dialog textarea {
   width: 100%;
@@ -1284,15 +1284,15 @@ svg {
 .settings-account small {
   display: block;
   font-size: 10px;
-  color: #8a977f;
+  color: #939393;
   margin-top: 3px;
 }
 .setup-code {
   display: block;
   font-size: 10px;
-  background: #f1f5eb;
+  background: #f3f3f3;
   padding: 11px;
-  border: 1px solid #e2ead9;
+  border: 1px solid #e7e7e7;
   border-radius: 6px;
   margin: 15px 0;
   overflow-wrap: anywhere;
@@ -1300,7 +1300,7 @@ svg {
 .suite-dialog .form-help {
   font-size: 10px;
   line-height: 1.8;
-  color: #8a967e;
+  color: #929292;
 }
 .suite-form-row {
   display: flex;
@@ -1316,7 +1316,7 @@ svg {
 .legacy-section > p {
   font-size: 11px;
   line-height: 1.8;
-  color: #829273;
+  color: #8c8c8c;
   margin: 17px 0;
 }
 .legacy-row {
@@ -1324,7 +1324,7 @@ svg {
   align-items: center;
   gap: 13px;
   padding: 12px 0;
-  border-bottom: 1px solid #e4eadc;
+  border-bottom: 1px solid #e8e8e8;
 }
 .legacy-row strong {
   font-size: 12px;
@@ -1334,14 +1334,14 @@ svg {
   display: flex;
   align-items: center;
   gap: 13px;
-  border-bottom: 1px solid #e5ebdf;
+  border-bottom: 1px solid #e9e9e9;
   padding: 12px 0;
   font-size: 12px;
 }
 .version-row time {
   font-size: 10px;
   margin-left: auto;
-  color: #8a977f;
+  color: #939393;
 }
 .native-editor {
   height: 100dvh;
@@ -1356,7 +1356,7 @@ svg {
   gap: 10px;
   min-height: 67px;
   padding: 11px 18px;
-  border-bottom: 1px solid #dce4d5;
+  border-bottom: 1px solid #e1e1e1;
   background: #fafcf8;
   flex-wrap: wrap;
 }
@@ -1371,7 +1371,7 @@ svg {
 .native-title small {
   display: block;
   font-size: 10px;
-  color: #819474;
+  color: #8e8e8e;
   margin-top: 4px;
 }
 .office-host-wrap {
@@ -1400,7 +1400,7 @@ svg {
   gap: 15px;
   padding: 18px 24px;
   background: #f8faf5;
-  border-bottom: 1px solid #e3e9db;
+  border-bottom: 1px solid #e7e7e7;
   flex-wrap: wrap;
 }
 .outlook-toolbar > div {
@@ -1410,7 +1410,7 @@ svg {
 .outlook-toolbar select,
 .mail-actions select,
 .calendar-toolbar select {
-  border: 1px solid #dce4d5;
+  border: 1px solid #e1e1e1;
   border-radius: 6px;
   padding: 9px;
   background: #fff;
@@ -1431,7 +1431,7 @@ svg {
   flex-direction: column;
   gap: 4px;
   padding: 20px 12px;
-  border-right: 1px solid #dfe6d6;
+  border-right: 1px solid #e3e3e3;
   background: #f2f5ed;
 }
 .mail-folders > button:not(.suite-button) {
@@ -1441,17 +1441,17 @@ svg {
   text-align: left;
   padding: 10px 9px;
   border-radius: 6px;
-  color: #697c5b;
+  color: #767676;
   font-size: 11px;
 }
 .mail-folders > button.active {
-  background: #dfe9d5;
-  color: #285b49;
+  background: #e5e5e5;
+  color: #0f6cbd;
   font-weight: 600;
 }
 .mail-folders > small {
   font-size: 9px;
-  color: #8b9a7e;
+  color: #959595;
   line-height: 1.8;
   margin-top: auto;
   padding: 15px 8px 0;
@@ -1463,7 +1463,7 @@ svg {
 }
 .message-list {
   background: #fff;
-  border-right: 1px solid #e0e6d9;
+  border-right: 1px solid #e4e4e4;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -1473,8 +1473,8 @@ svg {
   align-items: center;
   gap: 7px;
   padding: 11px;
-  border-bottom: 1px solid #e4eadc;
-  color: #8d9a82;
+  border-bottom: 1px solid #e8e8e8;
+  color: #969696;
 }
 .mail-search input {
   width: 100%;
@@ -1493,29 +1493,29 @@ svg {
   align-items: center;
   justify-content: space-between;
   padding: 17px 18px;
-  border-bottom: 1px solid #e9eee2;
+  border-bottom: 1px solid #ececec;
 }
 .message-list-heading h2 {
   font-size: 14px;
   font-weight: 600;
 }
 .message-list-heading button {
-  color: #8b9a7f;
+  color: #959595;
 }
 .message-row {
   width: 100%;
   padding: 17px 18px;
   text-align: left;
   position: relative;
-  border-bottom: 1px solid #eaf0e4;
+  border-bottom: 1px solid #eeeeee;
   border-left: 3px solid transparent;
 }
 .message-row:hover {
   background: #fafcf7;
 }
 .message-row.active {
-  background: #f1f6eb;
-  border-left-color: #6d9860;
+  background: #f4f4f4;
+  border-left-color: #8b8b8b;
 }
 .message-row > span {
   display: flex;
@@ -1534,7 +1534,7 @@ svg {
 .message-row time {
   font-size: 8px;
   white-space: nowrap;
-  color: #899a7b;
+  color: #949494;
 }
 .message-row > b {
   display: block;
@@ -1555,7 +1555,7 @@ svg {
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 9px;
-  color: #94a187;
+  color: #9c9c9c;
   line-height: 1.7;
 }
 .message-row > svg {
@@ -1571,12 +1571,12 @@ svg {
   padding: 13px 16px;
   margin-top: auto;
   font-size: 10px;
-  color: #829575;
+  color: #8f8f8f;
 }
 .mail-loading {
   padding: 20px;
   font-size: 11px;
-  color: #8b997f;
+  color: #949494;
 }
 .reading-pane {
   padding: 24px;
@@ -1588,7 +1588,7 @@ svg {
 .email-card {
   padding: 24px;
   background: white;
-  border: 1px solid #e1e8d9;
+  border: 1px solid #e5e5e5;
   border-radius: 10px;
   margin-bottom: 17px;
   overflow: hidden;
@@ -1600,7 +1600,7 @@ svg {
   margin-bottom: 20px;
 }
 .email-card h2 {
-  font-family: Georgia, serif;
+  font-family: "Segoe UI", Arial, sans-serif;
   font-size: 23px;
   font-weight: 400;
   line-height: 1.4;
@@ -1613,21 +1613,21 @@ svg {
 }
 .email-card header p {
   font-size: 10px;
-  color: #819273;
+  color: #8c8c8c;
   line-height: 1.7;
   margin: 6px 0;
   overflow-wrap: anywhere;
 }
 .email-card header time {
   font-size: 9px;
-  color: #93a087;
+  color: #9b9b9b;
 }
 .mail-actions {
   display: flex;
   gap: 5px;
   flex-wrap: wrap;
   padding-bottom: 17px;
-  border-bottom: 1px solid #e8eee1;
+  border-bottom: 1px solid #ececec;
   margin-bottom: 20px;
 }
 .mail-actions .suite-button {
@@ -1645,13 +1645,13 @@ svg {
   line-height: 1.9;
   overflow-wrap: anywhere;
   overflow: auto;
-  color: #40523a;
+  color: #4c4c4c;
 }
 .email-rendered p {
   margin: 10px 0;
 }
 .email-rendered a {
-  color: #397e71;
+  color: #6e6e6e;
   text-decoration: underline;
 }
 .email-rendered table {
@@ -1661,14 +1661,14 @@ svg {
 .email-rendered td,
 .email-rendered th {
   padding: 6px;
-  border: 1px solid #dce5d4;
+  border: 1px solid #e2e2e2;
 }
 .email-rendered ul,
 .email-rendered ol {
   padding-left: 24px;
 }
 .email-rendered blockquote {
-  border-left: 2px solid #d5e0cb;
+  border-left: 2px solid #dcdcdc;
   margin: 12px 0;
   padding-left: 13px;
 }
@@ -1697,21 +1697,21 @@ svg {
   align-items: center;
   gap: 12px;
   padding: 10px 13px;
-  border: 1px solid #dce4d3;
+  border: 1px solid #e1e1e1;
   border-bottom: 0;
   border-radius: 6px 6px 0 0;
-  background: #f3f7ed;
+  background: #f5f5f5;
 }
 .compose-format button {
   font-size: 10px;
-  color: #6c815d;
+  color: #7a7a7a;
 }
 .compose-body {
   padding: 17px;
   min-height: 220px;
   max-height: 350px;
   overflow: auto;
-  border: 1px solid #dce4d3;
+  border: 1px solid #e1e1e1;
   border-radius: 0 0 6px 6px;
   line-height: 1.8;
   font-size: 12px;
@@ -1723,9 +1723,9 @@ svg {
   padding-left: 22px;
 }
 .compose-body blockquote {
-  border-left: 2px solid #ceddc3;
+  border-left: 2px solid #d8d8d8;
   padding-left: 14px;
-  color: #7b8b70;
+  color: #868686;
 }
 .outlook-calendar {
   padding: 24px;
@@ -1745,22 +1745,22 @@ svg {
   align-items: center;
 }
 .calendar-toolbar h2 {
-  font-family: Georgia, serif;
+  font-family: "Segoe UI", Arial, sans-serif;
   font-size: 25px;
   font-weight: 400;
   flex: 1;
 }
 .calendar-zone {
   font-size: 10px;
-  color: #849778;
+  color: #919191;
   margin-bottom: 20px;
   line-height: 1.8;
 }
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  border-left: 1px solid #dfe6d5;
-  border-top: 1px solid #dfe6d5;
+  border-left: 1px solid #e3e3e3;
+  border-top: 1px solid #e3e3e3;
   background: white;
 }
 .calendar-grid.day {
@@ -1768,8 +1768,8 @@ svg {
 }
 .calendar-day {
   min-height: 120px;
-  border-right: 1px solid #dfe6d5;
-  border-bottom: 1px solid #dfe6d5;
+  border-right: 1px solid #e3e3e3;
+  border-bottom: 1px solid #e3e3e3;
   padding: 9px;
   min-width: 0;
 }
@@ -1781,7 +1781,7 @@ svg {
 }
 .calendar-day.other-month {
   background: #f6f8f2;
-  color: #a0ac93;
+  color: #a8a8a8;
 }
 .calendar-date {
   font-size: 9px;
@@ -1791,7 +1791,7 @@ svg {
   border-radius: 4px;
 }
 .calendar-day.today .calendar-date {
-  background: #285b49;
+  background: #0f6cbd;
   color: #fff;
 }
 .calendar-event {
@@ -1800,13 +1800,13 @@ svg {
   gap: 4px;
   text-align: left;
   width: 100%;
-  background: #e8f0df;
-  border-left: 2px solid #81a469;
+  background: #ededed;
+  border-left: 2px solid #989898;
   border-radius: 4px;
   margin: 6px 0;
   padding: 7px;
   font-size: 10px;
-  color: #456b36;
+  color: #5f5f5f;
 }
 .calendar-event time {
   font-size: 8px;
@@ -1821,7 +1821,7 @@ svg {
 }
 .ai-suite-nav {
   padding: 8px 20px;
-  border-bottom: 1px solid #e0e7da;
+  border-bottom: 1px solid #e5e5e5;
   background: #f6f9f1;
 }
 .ai-suite-nav .suite-nav {
@@ -1849,7 +1849,7 @@ svg {
 .office-ai-panel {
   width: 430px;
   max-width: 45vw;
-  border-left: 1px solid #d8e1d0;
+  border-left: 1px solid #dedede;
   display: flex;
   flex-direction: column;
   background: white;
@@ -1868,8 +1868,8 @@ svg {
   padding: 10px 15px;
   font-size: 10px;
   line-height: 1.7;
-  color: #7a8e6b;
-  border-bottom: 1px solid #e3eadc;
+  color: #878787;
+  border-bottom: 1px solid #e8e8e8;
 }
 .office-ai-panel #ai-studio-shell {
   height: 100%;
@@ -2050,7 +2050,7 @@ svg {
   .reading-pane {
     grid-column: 1/-1;
     max-height: none;
-    border-top: 1px solid #dde6d4;
+    border-top: 1px solid #e3e3e3;
     min-height: 250px;
   }
   .outlook-toolbar select {
@@ -2144,7 +2144,7 @@ svg {
   position: absolute;
   right: 40px;
   bottom: 39px;
-  color: #819872;
+  color: #909090;
   padding: 5px;
 }
 .pdf-dialog {

@@ -1,4 +1,5 @@
 "use client";
+import { AppIcon } from "./office-brand";
 import { apps } from "./suite-api";
 export function SuiteNav({
   active,
@@ -13,6 +14,8 @@ export function SuiteNav({
         <a
           key={app.id}
           aria-label={app.name}
+          aria-current={active === app.id ? "page" : undefined}
+          title={app.name}
           className={active === app.id ? "active" : ""}
           href={app.id === "ai" ? "/ai-studio" : `/?app=${app.id}`}
           onClick={(e) => {
@@ -22,9 +25,7 @@ export function SuiteNav({
             }
           }}
         >
-          <span className="app-letter" style={{ background: app.color }}>
-            {app.letter}
-          </span>
+          <AppIcon kind={app.id} size={30} />
           <span>{app.name}</span>
         </a>
       ))}

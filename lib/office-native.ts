@@ -7,6 +7,7 @@ import {
   TableCell,
   TableRow,
   TextRun,
+  WidthType,
 } from "docx";
 import ExcelJS from "exceljs";
 import PptxGenJS from "pptxgenjs";
@@ -117,7 +118,13 @@ export async function createNativeFile(
                   ),
               }),
           );
-          if (rows.length) children.push(new Table({ rows }));
+          if (rows.length)
+            children.push(
+              new Table({
+                rows,
+                width: { size: 100, type: WidthType.PERCENTAGE },
+              }),
+            );
         } else if (/^(h[1-3]|p|li|blockquote)$/.test(tag)) {
           const heading = {
             h1: HeadingLevel.HEADING_1,
@@ -141,6 +148,40 @@ export async function createNativeFile(
       await (
         await Packer.toBlob(
           new Document({
+            styles: {
+              default: {
+                document: {
+                  run: { font: "Calibri", size: 22, color: "242424" },
+                  paragraph: { spacing: { after: 160, line: 276 } },
+                },
+                heading1: {
+                  run: {
+                    font: "Calibri",
+                    size: 40,
+                    bold: true,
+                    color: "185ABD",
+                  },
+                  paragraph: { spacing: { before: 240, after: 180 } },
+                },
+                heading2: {
+                  run: {
+                    font: "Calibri",
+                    size: 28,
+                    bold: true,
+                    color: "185ABD",
+                  },
+                  paragraph: { spacing: { before: 220, after: 100 } },
+                },
+                heading3: {
+                  run: {
+                    font: "Calibri",
+                    size: 24,
+                    bold: true,
+                    color: "424242",
+                  },
+                },
+              },
+            },
             sections: [
               { children: children.length ? children : [new Paragraph("")] },
             ],
@@ -151,6 +192,8 @@ export async function createNativeFile(
   } else if (kind === "sheet") {
     const book = new ExcelJS.Workbook(),
       sheet = book.addWorksheet("Sheet 1");
+    sheet.properties.defaultColWidth = 18;
+    sheet.properties.defaultRowHeight = 20;
     for (const [key, value] of Object.entries(content?.cells ?? {}))
       sheet.getCell(key).value = value.startsWith("=")
         ? { formula: value.slice(1) }

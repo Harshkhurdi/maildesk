@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./office.css";
 
 export const metadata: Metadata = {
   title: "MailDesk — your productivity workspace",
@@ -17,7 +18,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased" data-ui-version="office-workspace-v2">
+        {children}
+      </body>
     </html>
   );
 }

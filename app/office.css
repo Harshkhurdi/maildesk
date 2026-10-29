@@ -1,0 +1,1872 @@
+/* MailDesk Office workspace: system fonts and CSS previews, no remote assets. */
+:root {
+  --bg: #f5f5f5;
+  --ink: #242424;
+  --muted: #616161;
+  --line: #e0e0e0;
+  --green: #0f6cbd;
+  --sage: #f3f6fa;
+  --white: #fff;
+}
+body {
+  font-family: "Segoe UI", SegoeUI, Arial, sans-serif;
+  font-size: 14px;
+  background: #f5f5f5;
+  color: #242424;
+}
+button:focus-visible,
+a:focus-visible {
+  outline-color: #0f6cbd;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  outline-color: #0f6cbd;
+}
+.office-app-icon {
+  display: inline-flex;
+  position: relative;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
+  vertical-align: middle;
+}
+.office-icon-sheet {
+  position: absolute;
+  right: 0;
+  top: 4%;
+  width: 73%;
+  height: 90%;
+  border-radius: 3px;
+  background: linear-gradient(145deg, var(--icon-back), var(--icon-color));
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 3%;
+  color: #ffffffba;
+  box-shadow: 0 1px 3px #0001;
+}
+.office-app-icon b {
+  z-index: 1;
+  position: absolute;
+  left: 0;
+  top: 24%;
+  height: 63%;
+  width: 63%;
+  display: grid;
+  place-items: center;
+  background: var(--icon-color);
+  box-shadow: 2px 2px 5px #0003;
+  border-radius: 2px;
+  font-size: clamp(12px, 1em, 25px);
+  color: #fff;
+  font-weight: 600;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+.office-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+  padding: 0 20px;
+  background: #10294c;
+  color: #fff;
+  z-index: 40;
+  border-bottom: 1px solid #ffffff12;
+}
+.office-brand {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 245px;
+  font-size: 15px;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+.office-brand strong {
+  font-weight: 600;
+  font-size: 17px;
+}
+.office-brand > svg {
+  color: #aecaf1;
+}
+.office-brand-divider {
+  width: 1px;
+  height: 22px;
+  background: #ffffff3d;
+  margin: 0 3px;
+}
+.office-global-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffffec;
+  border: 1px solid #fff4;
+  color: #535353;
+  border-radius: 5px;
+  width: min(530px, 48vw);
+  padding: 0 12px;
+  height: 34px;
+  box-shadow: 0 1px 3px #0001;
+}
+.office-global-search input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  color: #242424;
+}
+.office-global-search kbd {
+  font-family: inherit;
+  font-size: 10px;
+  color: #888;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+.office-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-left: auto;
+}
+.office-top-actions > button {
+  padding: 5px;
+  display: grid;
+  place-items: center;
+}
+.office-top-actions .suite-avatar {
+  width: 31px;
+  height: 31px;
+  border: 1px solid #ffffff90;
+  box-shadow: none;
+  background: #d2e3fa;
+  color: #173b72;
+  font-size: 13px;
+}
+.office-shell .suite-sidebar {
+  top: 52px;
+  bottom: 0;
+  width: 76px;
+  padding: 14px 0;
+  background: #f0f0f0;
+  border-right: 1px solid #e0e0e0;
+  z-index: 30;
+}
+.office-shell .suite-nav {
+  gap: 4px;
+}
+.office-shell .suite-nav a {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 0;
+  min-height: 73px;
+  padding: 11px 2px;
+  color: #454545;
+  font-size: 10px;
+  text-align: center;
+  font-weight: 400;
+}
+.office-shell .suite-nav a:hover {
+  background: #e5e5e5;
+}
+.office-shell .suite-nav a.active {
+  background: #e2eaf4;
+  color: #0f548c;
+  font-weight: 600;
+}
+.office-shell .suite-nav a.active:before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15px;
+  bottom: 15px;
+  width: 3px;
+  background: var(--app-accent, #0f6cbd);
+  border-radius: 0 3px 3px 0;
+}
+.office-shell .suite-sidebar-bottom {
+  padding: 0 4px 14px;
+  font-size: 10px;
+  text-align: center;
+  color: #616161;
+}
+.office-shell .suite-sidebar-bottom button {
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  padding: 12px 0;
+}
+.office-shell .suite-sidebar-bottom a {
+  padding: 9px 0;
+  color: #616161;
+}
+.office-shell .suite-main {
+  margin: 52px 0 0 76px;
+  min-height: calc(100dvh - 52px);
+  background: #fafafa;
+}
+.office-shell .suite-library {
+  max-width: 1420px;
+  margin: 0 auto;
+  padding: 29px 46px 40px;
+}
+.office-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #777;
+  margin-bottom: 24px;
+}
+.office-breadcrumb span:last-child {
+  color: #424242;
+}
+.office-shell .suite-page-heading {
+  margin: 0 0 32px;
+  align-items: center;
+}
+.office-shell .suite-eyebrow {
+  font-size: 10px;
+  letter-spacing: 1.15px;
+  color: #727272;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.office-shell .suite-page-heading h1 {
+  font-family: inherit;
+  font-size: 32px;
+  line-height: 1.25;
+  letter-spacing: -0.8px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+.heading-punctuation {
+  display: none;
+}
+.office-shell .suite-page-heading > div > p:last-child {
+  font-size: 14px;
+  color: #616161;
+  line-height: 1.5;
+}
+.office-shell .suite-page-heading > .office-app-icon {
+  margin-right: 5px;
+  font-size: 30px;
+}
+.office-section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.office-section-heading h2 {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+.office-section-heading > span {
+  font-size: 12px;
+  color: #757575;
+}
+.office-template-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 18px;
+  margin-bottom: 38px;
+}
+.office-template-card {
+  padding: 0;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #dedede;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 3px #00000003;
+  transition:
+    box-shadow 0.15s,
+    border-color 0.15s;
+  min-width: 0;
+}
+.office-template-card:hover {
+  box-shadow: 0 4px 13px #00000012;
+  border-color: #a4bfdc;
+}
+.office-template-card > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 14px;
+  border-top: 1px solid #eaeaea;
+}
+.office-template-card strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.template-preview {
+  height: 161px;
+  background: #eff1f4;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+  padding: 15px;
+}
+.template-preview.document {
+  background: #eef2f8;
+}
+.template-preview.sheet {
+  background: #edf3ef;
+}
+.template-preview.slides {
+  background: #f8efec;
+}
+.template-blank {
+  width: 94px;
+  height: 129px;
+  background: white;
+  box-shadow: 0 2px 6px #0002;
+  border: 1px solid #dedede;
+  display: grid;
+  place-items: center;
+  border-radius: 1px;
+}
+.template-blank > span {
+  font-size: 38px;
+  font-weight: 200;
+  line-height: 1;
+  color: var(--app-accent);
+  margin-top: -8px;
+}
+.sheet .template-blank {
+  width: 166px;
+  height: 116px;
+  background-color: #fff;
+  background-image:
+    linear-gradient(#dfe9e2 1px, transparent 1px),
+    linear-gradient(90deg, #dfe9e2 1px, transparent 1px);
+  background-size: 28px 18px;
+}
+.slides .template-blank {
+  width: 180px;
+  height: 108px;
+}
+.template-paper {
+  padding: 13px 12px;
+  width: 98px;
+  height: 137px;
+  background: #fff;
+  box-shadow: 0 2px 6px #0002;
+  position: relative;
+  overflow: hidden;
+  border-top: 4px solid #185abd;
+}
+.template-paper > span {
+  font-size: 4px;
+  letter-spacing: 0.8px;
+  display: block;
+  color: #526b91;
+  margin-bottom: 8px;
+}
+.template-paper strong {
+  display: block;
+  font-size: 9px;
+  font-weight: 650;
+  line-height: 1.3;
+  white-space: pre-line;
+  color: #183864;
+  margin-bottom: 10px;
+}
+.template-paper i {
+  display: block;
+  height: 2px;
+  background: #d8dfe9;
+  margin: 3px 0;
+}
+.template-paper i:nth-of-type(3) {
+  width: 75%;
+}
+.paper-mini-table {
+  height: 20px;
+  border: 1px solid #dce2ec;
+  margin: 9px 0 7px;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 5px,
+    #e4eaf1 5px,
+    #e4eaf1 6px
+  );
+}
+.minutes .template-paper {
+  border-top-color: #3a636c;
+}
+.minutes .template-paper strong {
+  color: #375860;
+}
+.template-workbook {
+  width: 193px;
+  height: 128px;
+  background: #fff;
+  padding: 12px 10px;
+  box-shadow: 0 2px 6px #0002;
+  border-top: 4px solid #107c41;
+  position: relative;
+  overflow: hidden;
+}
+.template-workbook > strong {
+  font-size: 6px;
+  color: #147344;
+  letter-spacing: 0.3px;
+  display: block;
+  margin-bottom: 8px;
+}
+.template-cells {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(3, 1fr);
+  font-size: 4px;
+}
+.template-cells i {
+  font-style: normal;
+  border: 1px solid #e3e9e5;
+  padding: 3px 2px;
+  text-align: right;
+}
+.template-cells i:nth-child(-n + 4) {
+  background: #107c41;
+  color: white;
+}
+.template-bars {
+  position: absolute;
+  right: 9px;
+  bottom: 7px;
+  display: flex;
+  gap: 4px;
+  align-items: end;
+  height: 25px;
+  background: #fff;
+  padding: 1px 7px;
+}
+.template-bars i {
+  height: 75%;
+  width: 9px;
+  background: #107c41;
+}
+.template-bars i:nth-child(2) {
+  height: 55%;
+  background: #7eb99a;
+}
+.template-bars i:nth-child(3) {
+  height: 90%;
+  background: #107c41;
+}
+.template-bars i:nth-child(4) {
+  height: 65%;
+  background: #7eb99a;
+}
+.template-slide {
+  width: 210px;
+  height: 118px;
+  padding: 15px 16px;
+  background: #173751;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 6px #0002;
+  color: white;
+}
+.template-slide > span {
+  display: block;
+  font-size: 4px;
+  letter-spacing: 1px;
+  color: #aac2cf;
+  position: relative;
+  z-index: 1;
+}
+.template-slide > strong {
+  display: block;
+  font-size: 18px;
+  line-height: 1.12;
+  margin: 10px 0 7px;
+  position: relative;
+  z-index: 1;
+  font-weight: 600;
+}
+.template-slide > small {
+  font-size: 4px;
+  color: #bacbd6;
+  position: relative;
+  z-index: 1;
+}
+.slide-orbit {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  right: -32px;
+  top: 15px;
+  border: 22px solid #48bdb7;
+  border-radius: 50%;
+  opacity: 0.85;
+}
+.office-upload-tile {
+  border: 1px dashed #c5cbd2;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  overflow: hidden;
+  background: #f6f7f9;
+  color: #616161;
+  min-width: 0;
+}
+.office-upload-tile:hover {
+  background: #edf3fb;
+  border-color: #6c9ed4;
+}
+.office-upload-tile > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-height: 161px;
+  padding: 15px 8px;
+}
+.office-upload-tile > div > svg {
+  color: #53779e;
+  margin-bottom: 1px;
+}
+.office-upload-tile strong {
+  font-size: 12px;
+  color: #344f6b;
+  font-weight: 600;
+}
+.office-upload-tile span {
+  font-size: 10px;
+  color: #747c84;
+}
+.office-upload-tile > small {
+  font-size: 10px;
+  display: block;
+  border-top: 1px dashed #d1d6dd;
+  padding: 17px 7px;
+  width: 100%;
+  line-height: 16px;
+}
+.office-shell .suite-file-heading {
+  margin: 0;
+  padding: 0 0 12px;
+  border-bottom: 1px solid #d9d9d9;
+  align-items: center;
+  min-height: 49px;
+}
+.office-file-tabs {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-width: 0;
+}
+.office-file-tabs > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: #777;
+  white-space: nowrap;
+}
+.office-file-tabs > span.active {
+  position: relative;
+  color: #242424;
+  font-weight: 600;
+  font-size: 15px;
+}
+.office-file-tabs > span.active:after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -24px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--app-accent);
+}
+.office-file-tabs b {
+  font-weight: 400;
+  background: #eee;
+  border-radius: 9px;
+  padding: 1px 5px;
+  font-size: 10px;
+}
+.office-view-switch {
+  display: flex;
+  align-items: center;
+  border: 1px solid #d1d1d1;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.office-view-switch button {
+  padding: 6px 8px;
+  color: #666;
+  display: grid;
+  place-items: center;
+}
+.office-view-switch [aria-pressed="true"] {
+  background: #e9eff6;
+  color: #0f548c;
+}
+.office-shell .suite-button,
+.native-editor .suite-button {
+  font-size: 12px;
+  min-height: 32px;
+  border-radius: 4px;
+  padding: 7px 11px;
+  border-color: #d1d1d1;
+  color: #323130;
+}
+.suite-button:hover {
+  background: #f0f5fa;
+  border-color: #a3b7cc;
+}
+.suite-button.primary,
+.button.primary {
+  background: #0f6cbd;
+  border-color: #0f6cbd;
+  color: #fff;
+}
+.suite-button.primary:hover,
+.button.primary:hover {
+  background: #115ea3;
+}
+.suite-button.selected {
+  background: #eaf2fc;
+  border-color: #afc9e5;
+  color: #0f548c;
+}
+.office-shell .icon-only {
+  padding: 6px 9px;
+}
+.office-shell .suite-file-heading .suite-button:not(.icon-only) {
+  color: var(--app-accent);
+  border-color: transparent;
+  background: transparent;
+}
+.office-list-head {
+  display: none;
+}
+.office-files-list {
+  display: block;
+  gap: 0;
+}
+.office-files-list .office-list-head {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 180px 90px 64px;
+  padding: 16px 20px;
+  font-size: 11px;
+  color: #6b6b6b;
+  border-bottom: 1px solid #e8e8e8;
+}
+.office-files-list .suite-file-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px 32px;
+  border: 0;
+  border-bottom: 1px solid #e8e8e8;
+  border-radius: 0;
+  background: transparent;
+  padding: 0 20px;
+}
+.office-files-list .suite-file-card:hover {
+  background: #f0f3f7;
+}
+.office-files-list .file-open {
+  display: grid;
+  grid-template-columns: 42px minmax(100px, 1fr) 180px 90px;
+  gap: 0;
+  align-items: center;
+  padding: 17px 0;
+  min-width: 0;
+}
+.office-files-list .file-open .file-preview {
+  display: none;
+}
+.office-files-list .file-open strong {
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0;
+  padding: 0 15px 0 0;
+}
+.office-files-list .file-open small {
+  font-size: 11px;
+  color: #757575;
+  margin: 0;
+}
+.office-file-version {
+  font-size: 11px;
+  color: #777;
+}
+.office-files-list .suite-file-card .file-rename,
+.office-files-list .suite-file-card > a {
+  position: static;
+  align-self: center;
+  padding: 7px;
+  color: #666;
+  display: grid;
+  place-items: center;
+}
+.office-files-list .suite-file-card > a:hover,
+.office-files-list .file-rename:hover {
+  background: #e2e8f0;
+  border-radius: 4px;
+}
+.office-files-grid {
+  margin-top: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: 18px;
+}
+.office-files-grid .suite-file-card {
+  border-color: #ddd;
+  border-radius: 5px;
+  box-shadow: 0 1px 3px #00000004;
+}
+.office-files-grid .file-open {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 6px 7px;
+}
+.office-files-grid .file-preview {
+  grid-column: 1/-1;
+  padding: 0;
+  margin-bottom: 9px;
+  height: 151px;
+  border: 0;
+  background: #f0f2f5;
+}
+.office-files-grid .file-preview .template-preview {
+  width: 100%;
+  height: 100%;
+}
+.office-files-grid .file-open > .office-app-icon {
+  grid-column: 1;
+  grid-row: 2/4;
+  width: 27px !important;
+  height: 27px !important;
+}
+.office-files-grid .file-open > strong {
+  font-size: 12px;
+  margin: 0;
+  padding: 0 40px 0 0;
+}
+.office-files-grid .file-open > small {
+  grid-column: 2;
+  font-size: 10px;
+  margin: 0 0 7px;
+  color: #777;
+}
+.office-files-grid .office-file-version {
+  display: none;
+}
+.office-files-grid .file-rename {
+  position: absolute;
+  right: 35px !important;
+  bottom: 21px !important;
+  color: #666 !important;
+}
+.office-files-grid .suite-file-card > a {
+  right: 10px;
+  bottom: 21px;
+  color: #666;
+}
+.office-shell .files-empty {
+  min-height: 220px;
+  border: 0;
+  border-bottom: 1px solid #e5e5e5;
+  border-radius: 0;
+  background: transparent;
+  gap: 9px;
+  padding: 36px 20px;
+}
+.office-empty-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  background: #eaf0f9;
+  color: #7198c7;
+  display: grid;
+  place-items: center;
+  margin-bottom: 5px;
+}
+.suite-empty h2,
+.suite-empty h3 {
+  font-family: inherit;
+  font-size: 18px;
+  color: #424242;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+.suite-empty p {
+  font-size: 12px;
+  color: #777;
+  line-height: 1.7;
+}
+.office-shell .suite-footer {
+  border-color: #e7e7e7;
+  font-size: 10px;
+  color: #8a8a8a;
+  padding: 16px 46px;
+  align-items: center;
+}
+.office-shell .suite-footer > span:first-child {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+.legacy-section {
+  margin-top: 25px;
+}
+.legacy-section .suite-button {
+  font-size: 12px;
+  color: #616161;
+}
+.suite-dialog {
+  border-radius: 8px;
+  border-color: #d1d1d1;
+  box-shadow: 0 12px 40px #0002;
+  font-size: 13px;
+}
+.suite-dialog h2 {
+  font-family: inherit;
+  font-size: 24px;
+  letter-spacing: -0.4px;
+  font-weight: 600;
+}
+.suite-dialog label {
+  font-size: 12px;
+  color: #424242;
+}
+.suite-dialog p {
+  font-size: 12px;
+  color: #616161;
+}
+.suite-dialog input,
+.suite-dialog textarea,
+.suite-dialog select {
+  border-radius: 3px;
+  border-color: #a8a8a8;
+  background: white;
+  color: #242424;
+  font-size: 13px;
+}
+.suite-dialog .form-help {
+  font-size: 11px;
+  color: #757575;
+}
+.settings-account small {
+  color: #777;
+}
+.suite-error {
+  font-size: 12px;
+}
+.suite-notice {
+  color: #0f548c;
+  background: #edf4fd;
+  border-color: #bfdbf4;
+}
+.setup-code {
+  background: #f5f5f5;
+  border-color: #ddd;
+  color: #616161;
+}
+.office-native .native-header {
+  background: var(--app-accent);
+  color: #fff;
+  min-height: 54px;
+  padding: 8px 16px;
+  gap: 11px;
+  border: 0;
+}
+.office-native .native-header > .office-app-icon {
+  margin: 0 4px;
+}
+.office-native .native-header .suite-button {
+  background: transparent;
+  color: #fff;
+  border: 1px solid #ffffff45;
+  padding: 6px 9px;
+  min-height: 30px;
+  font-size: 11px;
+  border-radius: 3px;
+}
+.office-native .native-header .suite-button:hover {
+  background: #ffffff20;
+  border-color: #ffffff80;
+}
+.office-native .native-title strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.office-native .native-title small {
+  font-size: 10px;
+  color: #ffffffb8;
+  margin-top: 3px;
+}
+.office-native .office-ai-panel {
+  background: white;
+  border-color: #ddd;
+}
+.office-ai-panel > header {
+  color: #242424;
+}
+.office-ai-panel > p {
+  background: #f4f6f9;
+  color: #616161;
+}
+.office-ai-panel a {
+  color: #0f6cbd;
+}
+.outlook-workspace {
+  background: #fff;
+  min-height: calc(100dvh - 92px);
+}
+.outlook-toolbar {
+  padding: 12px 23px;
+  background: #fff;
+  border-bottom-color: #e0e0e0;
+  gap: 12px;
+}
+.outlook-toolbar select,
+.mail-actions select,
+.calendar-toolbar select {
+  border-radius: 4px;
+  border-color: #d1d1d1;
+  font-size: 12px;
+  background: #fff;
+  color: #424242;
+}
+.outlook-columns {
+  grid-template-columns: 180px 330px minmax(260px, 1fr);
+  min-height: calc(100dvh - 170px);
+}
+.mail-folders {
+  background: #f5f5f5;
+  border-color: #e0e0e0;
+  padding: 18px 11px;
+  gap: 3px;
+}
+.mail-folders > button:not(.suite-button) {
+  font-size: 12px;
+  color: #424242;
+  border-radius: 4px;
+}
+.mail-folders > button.active {
+  background: #dceaf8;
+  color: #0f548c;
+}
+.mail-folders > small {
+  font-size: 10px;
+  color: #888;
+}
+.mail-folders .suite-button.primary {
+  margin: 0 0 15px;
+  background: #0f6cbd;
+  min-height: 35px;
+}
+.mail-search {
+  background: #fff;
+  border-color: #ddd;
+}
+.message-list {
+  background: #fff;
+  border-color: #e0e0e0;
+}
+.message-row {
+  background: white;
+  border-color: #eaeaea;
+}
+.message-row:hover {
+  background: #f5f8fc;
+}
+.message-row.active {
+  background: #eaf2fc;
+  border-left-color: #0f6cbd;
+}
+.message-row.unread {
+  background: #f8fbff;
+}
+.message-row strong {
+  color: #242424;
+}
+.message-row small,
+.message-row p {
+  color: #777;
+}
+.mail-reader {
+  background: #fff;
+}
+.mail-actions {
+  background: #fafafa;
+  border-color: #e0e0e0;
+}
+.outlook-calendar {
+  background: #fff;
+}
+.calendar-day {
+  background: #fff;
+  border-color: #ddd;
+}
+.calendar-date {
+  color: #424242;
+}
+.calendar-event {
+  background: #eaf3fc;
+  border-color: #0f6cbd;
+  color: #0f548c;
+}
+.calendar-toolbar h2 {
+  font-family: inherit;
+  font-weight: 600;
+  color: #242424;
+}
+.compose-toolbar {
+  background: #f5f5f5;
+  border-color: #ddd;
+}
+.compose-editor {
+  font-size: 14px;
+  color: #242424;
+}
+.email-rendered {
+  color: #242424;
+}
+/* Public sign-in shares the same Office visual language. */
+.office-auth {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  padding: 50px 5%;
+  justify-content: center;
+  background: #f7f9fc;
+}
+.office-auth-wrap {
+  display: grid;
+  grid-template-columns: minmax(360px, 460px) minmax(450px, 680px);
+  width: 100%;
+  max-width: 1200px;
+  margin: auto;
+  align-items: stretch;
+  background: #fff;
+  border: 1px solid #e6eaf1;
+  border-radius: 14px;
+  box-shadow: 0 14px 60px #1b38640b;
+  overflow: hidden;
+  min-height: 670px;
+}
+.office-auth .auth-card {
+  border: 0;
+  border-radius: 0;
+  width: 100%;
+  padding: 52px 48px;
+  background: white;
+  align-self: center;
+}
+.office-auth .brand {
+  font-size: 23px;
+  letter-spacing: -0.65px;
+  gap: 10px;
+  color: #233c60;
+}
+.office-auth .brand-mark {
+  background: #185abd;
+  border-radius: 7px;
+  color: #fff;
+}
+.office-auth .auth-card h1 {
+  font-family: inherit;
+  font-size: 28px;
+  letter-spacing: -0.8px;
+  font-weight: 600;
+  margin: 44px 0 13px;
+  color: #242424;
+}
+.office-auth .auth-card p {
+  font-size: 13px;
+  line-height: 1.75;
+  color: #6b6b6b;
+}
+.office-auth .auth-card label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #424242;
+}
+.office-auth .auth-card input {
+  font-size: 14px;
+  border-color: #b9c3d0;
+  border-radius: 4px;
+  padding: 12px;
+  background: white;
+  font-weight: 400;
+}
+.office-auth .button {
+  font-size: 13px;
+  border-radius: 4px;
+  min-height: 42px;
+}
+.office-auth .button.primary {
+  background: #185abd;
+  border-color: #185abd;
+  justify-content: space-between;
+}
+.office-auth .text-button {
+  color: #185abd;
+}
+.office-auth-showcase {
+  position: relative;
+  padding: 48px 48px 28px;
+  background: linear-gradient(140deg, #eef4ff 0%, #e7effc 45%, #f0f1fe 100%);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.office-auth-apps {
+  display: flex;
+  gap: 23px;
+  align-items: center;
+  margin-bottom: 44px;
+}
+.office-auth-eyebrow {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: #637ea6;
+  font-weight: 600;
+}
+.office-auth-showcase > h2 {
+  font-size: 36px;
+  letter-spacing: -1.3px;
+  line-height: 1.2;
+  font-weight: 600;
+  color: #1d3b68;
+  margin: 13px 0 16px;
+}
+.office-auth-showcase > h2 em {
+  font-style: normal;
+  color: #185abd;
+}
+.office-auth-showcase > p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #637a9c;
+}
+.office-auth-previews {
+  height: 246px;
+  position: relative;
+  width: 100%;
+  margin-top: 24px;
+}
+.auth-preview-paper {
+  position: absolute;
+  left: 20px;
+  top: 0;
+  width: 174px;
+  height: 222px;
+  background: white;
+  box-shadow: 0 9px 22px #25497c18;
+  border: 1px solid #e0e7f0;
+  padding: 17px;
+  transform: rotate(-7deg);
+  z-index: 2;
+}
+.auth-preview-paper > span {
+  font-size: 8px;
+  display: block;
+  margin: 9px 0 8px;
+  color: #8c9bb0;
+}
+.auth-preview-paper > strong {
+  font-size: 17px;
+  line-height: 1.18;
+  display: block;
+  color: #234874;
+  margin-bottom: 16px;
+}
+.auth-preview-paper > i {
+  display: block;
+  height: 3px;
+  background: #dce5f1;
+  margin: 6px 0;
+}
+.auth-preview-paper > div {
+  height: 37px;
+  background: linear-gradient(90deg, #ecf2fa, #f7faff);
+  border-top: 3px solid #5894d1;
+  margin-top: 14px;
+}
+.auth-preview-sheet {
+  position: absolute;
+  right: 0;
+  top: 36px;
+  width: 206px;
+  height: 152px;
+  transform: rotate(6deg);
+  padding: 13px 17px;
+  background: white;
+  box-shadow: 0 8px 23px #25497c17;
+  border: 1px solid #e0e7f0;
+  z-index: 1;
+}
+.auth-preview-sheet > strong {
+  font-size: 12px;
+  margin-left: 7px;
+  color: #20593f;
+}
+.auth-preview-sheet > span {
+  font-size: 6px;
+  color: #777;
+  display: block;
+  margin-top: 8px;
+}
+.auth-chart {
+  height: 67px;
+  display: flex;
+  align-items: end;
+  gap: 9px;
+  border-bottom: 1px solid #d8e5dd;
+  padding: 8px 13px 0;
+  margin-top: 8px;
+  background: repeating-linear-gradient(
+    0deg,
+    #ffffff,
+    #ffffff 16px,
+    #eef4f1 16px,
+    #eef4f1 17px
+  );
+}
+.auth-chart > i {
+  height: 45%;
+  width: 17px;
+  background: #78ba93;
+  border-radius: 2px 2px 0 0;
+}
+.auth-chart > i:nth-child(2) {
+  height: 63%;
+  background: #42a375;
+}
+.auth-chart > i:nth-child(3) {
+  height: 55%;
+  background: #9cccb0;
+}
+.auth-chart > i:nth-child(4) {
+  height: 76%;
+  background: #3c9b6a;
+}
+.auth-chart > i:nth-child(5) {
+  height: 94%;
+  background: #107c41;
+}
+.auth-preview-slide {
+  position: absolute;
+  right: 12px;
+  top: 150px;
+  width: 186px;
+  height: 106px;
+  background: #203c59;
+  color: white;
+  padding: 12px 14px;
+  transform: rotate(-2deg);
+  box-shadow: 0 10px 22px #25497c22;
+  z-index: 3;
+  overflow: hidden;
+}
+.auth-preview-slide:after {
+  content: "";
+  position: absolute;
+  width: 76px;
+  height: 76px;
+  border: 17px solid #64c5c2;
+  border-radius: 50%;
+  right: -25px;
+  top: 20px;
+}
+.auth-preview-slide > .office-app-icon {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+}
+.auth-preview-slide > strong {
+  display: block;
+  font-size: 18px;
+  line-height: 1.12;
+  margin: 5px 0 9px;
+  font-weight: 600;
+}
+.auth-preview-slide > span {
+  font-size: 5px;
+  letter-spacing: 0.7px;
+}
+.office-auth-showcase > small {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  line-height: 1.6;
+  color: #7890af;
+  margin-top: auto;
+  padding-top: 23px;
+}
+.office-auth-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #8794a5;
+  width: 100%;
+  max-width: 1200px;
+  margin: 20px auto 0;
+}
+/* AI Studio keeps its working chat and receives matching suite chrome. */
+.ai-studio-hostbar {
+  background: #10294c !important;
+  color: white !important;
+  border: 0 !important;
+  min-height: 52px !important;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+.ai-studio-hostbar a,
+.ai-studio-hostbar strong {
+  color: white !important;
+}
+.ai-studio-hostbar strong > span {
+  background: #ffffff18 !important;
+  color: #dce8ff !important;
+  border: 1px solid #ffffff25 !important;
+}
+.ai-suite-nav {
+  background: #f5f5f5 !important;
+  border-color: #ddd !important;
+}
+.ai-suite-nav .suite-nav a {
+  color: #616161 !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+}
+.ai-suite-nav .suite-nav a.active {
+  color: #5e4aa4 !important;
+  background: #eae6f7 !important;
+}
+.ai-studio-privacy {
+  font-size: 11px !important;
+  color: #737373 !important;
+  background: #fafafa !important;
+  border-color: #e8e8e8 !important;
+}
+@media (min-width: 1500px) {
+  .office-template-gallery {
+    grid-template-columns: repeat(4, minmax(170px, 1fr));
+  }
+  .office-template-gallery:has(.sheet),
+  .office-template-gallery:has(.slides) {
+    grid-template-columns: repeat(3, minmax(210px, 1fr));
+    max-width: 950px;
+  }
+}
+@media (max-width: 1100px) {
+  .office-shell .suite-library {
+    padding: 25px 28px 35px;
+  }
+  .office-section-heading > span {
+    display: none;
+  }
+  .office-brand {
+    min-width: 210px;
+  }
+  .office-list-head {
+    font-size: 10px;
+  }
+  .office-files-list .office-list-head {
+    grid-template-columns: minmax(130px, 1fr) 125px 65px 64px;
+  }
+  .office-files-list .file-open {
+    grid-template-columns: 42px minmax(100px, 1fr) 125px 65px;
+  }
+  .outlook-columns {
+    grid-template-columns: 145px 270px minmax(220px, 1fr);
+  }
+  .office-auth-wrap {
+    grid-template-columns: 420px 1fr;
+  }
+  .office-auth-showcase {
+    padding: 45px 32px 28px;
+  }
+  .office-auth .auth-card {
+    padding: 42px 35px;
+  }
+  .office-auth-showcase > h2 {
+    font-size: 31px;
+  }
+  .office-auth-apps {
+    gap: 15px;
+  }
+  .auth-preview-paper {
+    left: 0;
+    width: 158px;
+  }
+  .auth-preview-sheet {
+    right: -30px;
+    width: 185px;
+  }
+  .auth-preview-slide {
+    right: -20px;
+  }
+  .office-native .native-header {
+    gap: 7px;
+    padding: 8px;
+  }
+  .office-native .native-header .suite-button {
+    font-size: 10px;
+    padding: 6px;
+  }
+  .office-native .native-title {
+    min-width: 125px;
+  }
+}
+@media (max-width: 800px) {
+  .office-global-search {
+    width: 40vw;
+  }
+  .office-global-search kbd {
+    display: none;
+  }
+  .office-brand {
+    min-width: 0;
+    gap: 10px;
+  }
+  .office-brand-divider,
+  .office-brand > span:last-child {
+    display: none;
+  }
+  .office-shell .suite-library {
+    padding: 24px 22px;
+  }
+  .office-shell .suite-page-heading {
+    margin-bottom: 25px;
+  }
+  .office-shell .suite-page-heading h1 {
+    font-size: 28px;
+  }
+  .office-template-gallery {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+    gap: 13px;
+  }
+  .office-shell .suite-footer {
+    padding: 16px 23px;
+  }
+  .office-shell .suite-footer > span:last-child {
+    display: none;
+  }
+  .office-file-tabs > span:nth-child(2) {
+    display: none;
+  }
+  .office-files-list .office-list-head {
+    grid-template-columns: minmax(100px, 1fr) 110px 64px;
+  }
+  .office-list-head > span:nth-child(3) {
+    display: none;
+  }
+  .office-files-list .file-open {
+    grid-template-columns: 36px minmax(90px, 1fr) 110px;
+  }
+  .office-files-list .office-file-version {
+    display: none;
+  }
+  .outlook-columns {
+    grid-template-columns: 130px minmax(200px, 1fr);
+  }
+  .mail-reader {
+    grid-column: 1/-1;
+    border-top: 1px solid #ddd;
+  }
+  .office-auth-wrap {
+    grid-template-columns: 1fr;
+    max-width: 470px;
+    min-height: 0;
+  }
+  .office-auth-showcase {
+    display: none;
+  }
+  .office-auth .auth-card {
+    padding: 38px;
+  }
+  .office-auth .auth-card h1 {
+    margin-top: 34px;
+  }
+  .office-auth-footer {
+    max-width: 470px;
+    font-size: 10px;
+  }
+  .office-native .native-header > .office-app-icon {
+    display: none;
+  }
+}
+@media (max-width: 560px) {
+  .office-topbar {
+    height: 49px;
+    padding: 0 13px;
+    gap: 12px;
+  }
+  .office-brand strong {
+    font-size: 15px;
+  }
+  .office-brand > svg {
+    width: 18px;
+  }
+  .office-top-actions {
+    gap: 8px;
+  }
+  .office-top-actions > button:first-child {
+    display: none;
+  }
+  .office-global-search {
+    flex: 1;
+    min-width: 0;
+    height: 31px;
+    padding: 0 8px;
+    width: auto;
+  }
+  .office-global-search input {
+    font-size: 11px;
+  }
+  .office-global-search > svg {
+    width: 14px;
+  }
+  .office-shell .suite-sidebar {
+    width: 58px;
+    top: 49px;
+    bottom: 0;
+    padding-top: 10px;
+  }
+  .office-shell .suite-nav a {
+    font-size: 8px;
+    min-height: 65px;
+    gap: 4px;
+    padding: 9px 1px;
+  }
+  .office-shell .suite-nav a .office-app-icon {
+    width: 26px !important;
+    height: 26px !important;
+  }
+  .office-shell .suite-sidebar-bottom {
+    font-size: 8px;
+  }
+  .office-shell .suite-sidebar-bottom button {
+    font-size: 8px;
+  }
+  .office-shell .suite-main {
+    margin: 49px 0 0 58px;
+    min-height: calc(100dvh - 49px);
+  }
+  .office-shell .suite-library {
+    padding: 18px 14px 28px;
+  }
+  .office-breadcrumb {
+    font-size: 10px;
+    gap: 5px;
+    margin-bottom: 20px;
+  }
+  .office-shell .suite-eyebrow {
+    display: none;
+  }
+  .office-shell .suite-page-heading h1 {
+    font-size: 23px;
+    margin-bottom: 7px;
+    letter-spacing: -0.7px;
+  }
+  .office-shell .suite-page-heading > div > p:last-child {
+    font-size: 11px;
+    max-width: 205px;
+  }
+  .office-shell .suite-page-heading > .office-app-icon {
+    width: 40px !important;
+    height: 40px !important;
+    margin: 0 0 0 8px;
+  }
+  .office-section-heading h2 {
+    font-size: 14px;
+  }
+  .office-template-gallery {
+    grid-template-columns: repeat(2, minmax(100px, 1fr));
+    gap: 10px;
+    margin-bottom: 25px;
+  }
+  .template-preview {
+    height: 127px;
+    padding: 11px 6px;
+  }
+  .template-blank {
+    height: 99px;
+    width: 72px;
+  }
+  .template-paper {
+    transform: scale(0.78);
+    flex-shrink: 0;
+  }
+  .template-workbook {
+    transform: scale(0.75);
+    flex-shrink: 0;
+    width: 175px;
+  }
+  .template-slide {
+    transform: scale(0.75);
+    flex-shrink: 0;
+    width: 170px;
+  }
+  .template-slide > strong {
+    font-size: 16px;
+  }
+  .sheet .template-blank {
+    width: 100px;
+    height: 80px;
+  }
+  .slides .template-blank {
+    width: 104px;
+    height: 68px;
+  }
+  .office-template-card > span {
+    padding: 10px 7px;
+    gap: 6px;
+    min-height: 47px;
+  }
+  .office-template-card > span > .office-app-icon {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  .office-template-card strong {
+    font-size: 10px;
+  }
+  .office-upload-tile > div {
+    min-height: 127px;
+    gap: 8px;
+    padding: 10px 5px;
+  }
+  .office-upload-tile strong {
+    font-size: 10px;
+  }
+  .office-upload-tile span {
+    display: none;
+  }
+  .office-upload-tile > small {
+    font-size: 8px;
+    padding: 14px 3px;
+    min-height: 47px;
+    line-height: 16px;
+  }
+  .office-upload-tile > div > svg {
+    width: 23px;
+  }
+  .office-shell .suite-file-heading {
+    gap: 5px;
+    flex-wrap: nowrap;
+    padding-bottom: 10px;
+  }
+  .office-file-tabs > span.active {
+    font-size: 13px;
+    gap: 5px;
+  }
+  .office-file-tabs > span.active:after {
+    bottom: -21px;
+  }
+  .office-file-tabs > span.active > svg {
+    width: 14px;
+  }
+  .office-shell .suite-file-heading > div:last-child {
+    gap: 3px;
+  }
+  .office-shell .suite-file-heading .suite-button:not(.icon-only) {
+    font-size: 0;
+    padding: 6px 3px;
+  }
+  .office-shell .suite-file-heading .suite-button:not(.icon-only) > svg {
+    width: 17px;
+  }
+  .office-view-switch button {
+    padding: 6px;
+  }
+  .office-shell .icon-only {
+    padding: 6px;
+    border: 0;
+  }
+  .office-files-list .office-list-head {
+    grid-template-columns: 1fr 54px;
+    padding: 13px 4px;
+    font-size: 10px;
+  }
+  .office-files-list .office-list-head > span:nth-child(2) {
+    display: none;
+  }
+  .office-files-list .suite-file-card {
+    padding: 0 4px;
+    grid-template-columns: minmax(0, 1fr) 25px 25px;
+  }
+  .office-files-list .file-open {
+    grid-template-columns: 32px minmax(0, 1fr);
+    padding: 13px 0;
+  }
+  .office-files-list .file-open > .office-app-icon {
+    grid-row: 1/3;
+    width: 25px !important;
+    height: 25px !important;
+  }
+  .office-files-list .file-open strong {
+    font-size: 11px;
+    padding-right: 5px;
+  }
+  .office-files-list .file-open small {
+    grid-column: 2;
+    font-size: 9px;
+    margin-top: 4px;
+  }
+  .office-files-list .suite-file-card .file-rename,
+  .office-files-list .suite-file-card > a {
+    padding: 5px;
+  }
+  .office-files-list .suite-file-card .file-rename > svg,
+  .office-files-list .suite-file-card > a > svg {
+    width: 13px;
+  }
+  .office-files-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .office-shell .files-empty {
+    padding: 28px 8px;
+    min-height: 205px;
+  }
+  .office-empty-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 9px;
+  }
+  .office-empty-icon > svg {
+    width: 25px;
+  }
+  .suite-empty h3 {
+    font-size: 14px;
+  }
+  .suite-empty p {
+    font-size: 10px;
+  }
+  .office-shell .suite-footer {
+    padding: 13px 15px;
+    font-size: 9px;
+  }
+  .outlook-toolbar {
+    padding: 12px;
+    gap: 8px;
+  }
+  .outlook-toolbar select {
+    font-size: 10px;
+    max-width: 180px;
+    margin-left: 0;
+  }
+  .outlook-columns {
+    display: flex;
+    flex-direction: column;
+  }
+  .mail-folders {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 10px;
+  }
+  .mail-folders .suite-button.primary {
+    margin: 0;
+  }
+  .mail-folders > button:not(.suite-button) {
+    padding: 7px;
+    font-size: 10px;
+  }
+  .mail-folders > small {
+    display: none;
+  }
+  .message-list {
+    max-height: 400px;
+  }
+  .office-auth {
+    padding: 22px 16px;
+  }
+  .office-auth .auth-card {
+    padding: 32px 26px;
+  }
+  .office-auth-wrap {
+    border-radius: 8px;
+  }
+  .office-auth .auth-card h1 {
+    font-size: 26px;
+  }
+  .office-auth-footer {
+    gap: 15px;
+    font-size: 9px;
+  }
+  .office-native .native-header {
+    gap: 6px;
+    padding: 7px;
+  }
+  .office-native .native-header .suite-button {
+    font-size: 9px;
+    padding: 5px;
+    min-height: 28px;
+  }
+  .office-native .native-title {
+    order: -1;
+    flex-basis: 100%;
+    padding: 4px 3px 2px;
+  }
+  .office-native .native-title strong {
+    font-size: 12px;
+  }
+  .office-native .native-title small {
+    font-size: 9px;
+  }
+  .office-ai-panel {
+    top: 110px;
+  }
+}
+/* Reset the older compact-sidebar rules for the Office rail. */
+.office-shell .suite-nav {
+  margin-top: 0;
+}
+.office-shell .suite-nav a > span:last-child {
+  display: block;
+}
+.office-shell .suite-sidebar-bottom {
+  display: block;
+}
+.office-shell .reading-pane {
+  background: #f3f5f8;
+}
+.office-shell .email-card {
+  border-radius: 6px;
+}
+@media (max-width: 760px) {
+  .office-shell .suite-file-heading {
+    flex-direction: row;
+    align-items: center;
+  }
+  .office-shell .suite-file-heading > div {
+    width: auto;
+  }
+  .office-shell .suite-sidebar-bottom > button {
+    display: flex;
+  }
+  .office-shell .office-file-tabs > span.active:after {
+    bottom: -20px;
+  }
+}

@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { ArrowLeft, Download, Save, History, Sparkles, X } from "lucide-react";
 import { suiteApi, type NativeFile } from "./suite-api";
+import { AppIcon } from "./office-brand";
+import type { CSSProperties } from "react";
 import { download } from "@/lib/exporters";
 const AIStudioPanel = dynamic(() => import("./ai-studio/workspace"), {
   ssr: false,
@@ -243,8 +245,21 @@ export function OfficeEditor({
     }
   }
   return (
-    <section className="native-editor">
+    <section
+      className="native-editor office-native"
+      style={
+        {
+          "--app-accent":
+            file.kind === "sheet"
+              ? "#107c41"
+              : file.kind === "slides"
+                ? "#c43e1c"
+                : "#185abd",
+        } as CSSProperties
+      }
+    >
       <header className="native-header">
+        <AppIcon kind={file.kind} size={28} />
         <button
           className="suite-button"
           disabled={saving}
@@ -259,11 +274,12 @@ export function OfficeEditor({
         </div>
         <button
           className="suite-button"
+          aria-label="Save checkpoint"
           disabled={saving || !ready}
           onClick={() => void save()}
         >
           <Save size={16} />
-          {saving ? "Saving…" : "Save checkpoint"}
+          {saving ? "Saving…" : "Save"}
         </button>
         <button className="suite-button" onClick={() => setShowAI(!showAI)}>
           <Sparkles size={16} />

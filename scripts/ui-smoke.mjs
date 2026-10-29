@@ -217,8 +217,16 @@ try {
   const page = await context.newPage();
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("dialog", (dialog) => dialog.accept());
+  await mkdir(screenshotDirectory, { recursive: true });
+  await page.goto(base + "/auth/sign-in");
+  await page.getByRole("heading", { name: "Your work starts here." }).waitFor();
+  await page.screenshot({
+    path: screenshotDirectory + "/office-signin-desktop.png",
+    caret: "initial",
+    fullPage: true,
+  });
   await page.goto(base + "/maildesk-qa-fixture");
-  await page.getByRole("heading", { name: "MailDesk Word." }).waitFor();
+  await page.getByRole("heading", { name: "MailDesk Word" }).waitFor();
   assert.equal(
     await page
       .getByRole("navigation", { name: "Applications" })
@@ -226,7 +234,25 @@ try {
       .count(),
     5,
   );
-  await page.getByRole("button", { name: "Create a blank document" }).click();
+  await page
+    .locator(".file-open")
+    .filter({ hasText: "Quarterly report" })
+    .waitFor();
+  await page.screenshot({
+    path: screenshotDirectory + "/office-word-home.png",
+    caret: "initial",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Grid view", exact: true }).click();
+  await page.getByRole("button", { name: "List view", exact: true }).click();
+  await page
+    .getByRole("textbox", { name: "Find files", exact: true })
+    .fill("does-not-exist");
+  await page.getByRole("heading", { name: "No matching files" }).waitFor();
+  await page.getByRole("textbox", { name: "Find files", exact: true }).fill("");
+  await page
+    .getByRole("button", { name: "Create Project report", exact: true })
+    .click();
   await page
     .getByRole("textbox", { name: "File name", exact: true })
     .fill("Browser QA report");
@@ -244,6 +270,11 @@ try {
     .waitFor();
   const sdk = editorFrame.locator("#editor_sdk");
   await sdk.click({ position: { x: 300, y: 200 } });
+  await page.screenshot({
+    path: screenshotDirectory + "/office-word-editor.png",
+    caret: "initial",
+    fullPage: true,
+  });
   await input.focus();
   await page.keyboard.insertText("MAIL_DESK_EDIT_VERIFIED");
   await page
@@ -289,11 +320,12 @@ try {
   await mkdir(screenshotDirectory, { recursive: true });
   await page.screenshot({
     path: screenshotDirectory + "/word-desktop.png",
+    caret: "initial",
     fullPage: true,
   });
   for (const [name, heading] of [
-    ["Excel", "MailDesk Excel."],
-    ["PowerPoint", "MailDesk PowerPoint."],
+    ["Excel", "MailDesk Excel"],
+    ["PowerPoint", "MailDesk PowerPoint"],
   ]) {
     await page
       .getByRole("navigation", { name: "Applications" })
@@ -334,6 +366,15 @@ try {
       undefined,
       { timeout: 120_000 },
     );
+    await page.screenshot({
+      path:
+        screenshotDirectory +
+        "/office-" +
+        (isSheet ? "excel" : "powerpoint") +
+        "-editor.png",
+      caret: "initial",
+      fullPage: true,
+    });
     await capture.focus();
     if (isSheet) {
       await page.keyboard.press("Control+Home");
@@ -411,6 +452,7 @@ try {
   assert.equal(providerWrites.at(-1).draftId, "fixture-draft");
   await page.screenshot({
     path: screenshotDirectory + "/outlook-desktop.png",
+    caret: "initial",
     fullPage: true,
   });
   await page.getByRole("button", { name: "Calendar", exact: true }).click();
@@ -436,6 +478,7 @@ try {
   assert.equal(providerWrites.at(-1).event.summary, "Browser-only event");
   await page.screenshot({
     path: screenshotDirectory + "/calendar-desktop.png",
+    caret: "initial",
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -444,10 +487,11 @@ try {
     .getByRole("link", { name: "Word", exact: true })
     .click();
   await page
-    .getByRole("heading", { name: "MailDesk Word.", exact: true })
+    .getByRole("heading", { name: "MailDesk Word", exact: true })
     .waitFor();
   await page.screenshot({
     path: screenshotDirectory + "/word-mobile.png",
+    caret: "initial",
     fullPage: true,
   });
   assert(
