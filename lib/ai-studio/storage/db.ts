@@ -37,9 +37,13 @@ const DB_VERSION = 2;
 const STORE = "conversations";
 const GEN_STORE = "generations";
 
-function openDb(): Promise<IDBDatabase> {
+export function historyDatabaseName(scope?: string) {
+  return scope ? `${DB_NAME}:${scope}` : DB_NAME;
+}
+
+function openDb(databaseName = DB_NAME): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    const req = indexedDB.open(databaseName, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) {
@@ -58,20 +62,33 @@ async function withStore<T>(
   mode: IDBTransactionMode,
   fn: (store: IDBObjectStore) => IDBRequest<T>,
   name = STORE,
+  databaseName = DB_NAME,
 ): Promise<T> {
-  const db = await openDb();
+  const db = await openDb(databaseName);
   return new Promise<T>((resolve, reject) => {
     let tx: IDBTransaction;
     let req: IDBRequest<T>;
     try {
       tx = db.transaction(name, mode);
       req = fn(tx.objectStore(name));
-      tx.oncomplete = () => { db.close(); resolve(req.result); };
-      tx.onabort = () => { db.close(); reject(tx.error ?? new Error("Browser storage transaction was aborted.")); };
-      tx.onerror = () => { db.close(); reject(tx.error ?? new Error("Browser storage transaction failed.")); };
+      tx.oncomplete = () => {
+        db.close();
+        resolve(req.result);
+      };
+      tx.onabort = () => {
+        db.close();
+        reject(
+          tx.error ?? new Error("Browser storage transaction was aborted."),
+        );
+      };
+      tx.onerror = () => {
+        db.close();
+        reject(tx.error ?? new Error("Browser storage transaction failed."));
+      };
       // A request succeeding is not a committed save: quota/abort errors can
       // still follow. Only transaction completion resolves this operation.
-      req.onerror = () => reject(req.error ?? new Error("IndexedDB request failed"));
+      req.onerror = () =>
+        reject(req.error ?? new Error("IndexedDB request failed"));
     } catch (error) {
       db.close();
       reject(error);
@@ -79,17 +96,40 @@ async function withStore<T>(
   });
 }
 
-export async function getAllConversations(): Promise<Conversation[]> {
-  const all = await withStore<Conversation[]>("readonly", (s) => s.getAll() as IDBRequest<Conversation[]>);
+export async function getAllConversations(
+  databaseName = DB_NAME,
+): Promise<Conversation[]> {
+  const all = await withStore<Conversation[]>(
+    "readonly",
+    (s) => s.getAll() as IDBRequest<Conversation[]>,
+    STORE,
+    databaseName,
+  );
   return all.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-export async function saveConversation(conversation: Conversation): Promise<void> {
-  await withStore("readwrite", (s) => s.put(conversation) as IDBRequest<IDBValidKey>);
+export async function saveConversation(
+  conversation: Conversation,
+  databaseName = DB_NAME,
+): Promise<void> {
+  await withStore(
+    "readwrite",
+    (s) => s.put(conversation) as IDBRequest<IDBValidKey>,
+    STORE,
+    databaseName,
+  );
 }
 
-export async function deleteConversation(id: string): Promise<void> {
-  await withStore("readwrite", (s) => s.delete(id) as IDBRequest<undefined>);
+export async function deleteConversation(
+  id: string,
+  databaseName = DB_NAME,
+): Promise<void> {
+  await withStore(
+    "readwrite",
+    (s) => s.delete(id) as IDBRequest<undefined>,
+    STORE,
+    databaseName,
+  );
 }
 
 export function newId(): string {
@@ -112,10 +152,14 @@ export interface Generation {
 }
 
 export async function saveGeneration(gen: Generation): Promise<void> {
-  await withStore("readwrite", s => s.put(gen), GEN_STORE);
+  await withStore("readwrite", (s) => s.put(gen), GEN_STORE);
 }
 
 export async function getAllGenerations(): Promise<Generation[]> {
-  const all = await withStore<Generation[]>("readonly", s => s.getAll(), GEN_STORE);
+  const all = await withStore<Generation[]>(
+    "readonly",
+    (s) => s.getAll(),
+    GEN_STORE,
+  );
   return all.sort((a, b) => b.createdAt - a.createdAt);
 }

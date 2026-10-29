@@ -1,6 +1,7 @@
 "use client";
 import "@/app/ai-studio/studio.css";
 import Link from "next/link";
+import { useWorkspaceIdentity } from "@/components/workspace-identity";
 
 import { SuiteNav } from "@/components/suite-nav";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -18,13 +19,21 @@ import {
 import type { FreeModel } from "@/lib/ai-studio/openrouter/types";
 import { MAX_CHAT_IMPORT_BYTES } from "@/lib/ai-studio/storage/import";
 
-export default function HomePage({ embedded = false }: { embedded?: boolean } = {}) {
+export default function HomePage({
+  embedded = false,
+}: { embedded?: boolean } = {}) {
+  const identity = useWorkspaceIdentity();
+  const scope = identity.isOwner ? undefined : identity.userId;
+  const settingsKey = scope
+    ? `maildesk-ai-settings:${scope}`
+    : "maildesk-ai-settings";
+  const themeKey = scope ? `maildesk-ai-theme:${scope}` : "maildesk-ai-theme";
   const shellRef = useRef<HTMLDivElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [models, setModels] = useState<FreeModel[]>([]);
-  const [configured,setConfigured]=useState(false);
-  const [modelsLoading,setModelsLoading]=useState(true);
+  const [configured, setConfigured] = useState(false);
+  const [modelsLoading, setModelsLoading] = useState(true);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [settings, setSettings] = useState<ChatSettings>(DEFAULT_SETTINGS);
@@ -32,7 +41,7 @@ export default function HomePage({ embedded = false }: { embedded?: boolean } = 
   const [importing, setImporting] = useState(false);
   const importInput = useRef<HTMLInputElement>(null);
 
-  const chat = useChat(selectedId, settings);
+  const chat = useChat(selectedId, settings, scope);
   const composerRef = useRef<ComposerHandle>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   // Only auto-scroll while the user is already near the bottom.
@@ -41,46 +50,62 @@ export default function HomePage({ embedded = false }: { embedded?: boolean } = 
   // Restore settings once on mount (client only).
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("maildesk-ai-settings");
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (raw) setSettings({ ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as ChatSettings) });
+      const raw = localStorage.getItem(settingsKey);
+      if (raw)
+        // Hydrate this workspace’s browser-local settings.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSettings({
+          ...DEFAULT_SETTINGS,
+          ...(JSON.parse(raw) as ChatSettings),
+        });
     } catch {
       /* corrupted or unavailable */
     }
-  }, []);
+  }, [settingsKey]);
 
-  const updateSettings = useCallback((next: ChatSettings) => {
-    setSettings(next);
-    try {
-      localStorage.setItem("maildesk-ai-settings", JSON.stringify(next));
-    } catch {
-      /* private mode */
-    }
-  }, []);
+  const updateSettings = useCallback(
+    (next: ChatSettings) => {
+      setSettings(next);
+      try {
+        localStorage.setItem(settingsKey, JSON.stringify(next));
+      } catch {
+        /* private mode */
+      }
+    },
+    [settingsKey],
+  );
 
   // Hydrate the browser-only theme preference after mounting.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    try{const dark=localStorage.getItem("maildesk-ai-theme")==="dark";shellRef.current?.classList.toggle("dark",dark);setIsDark(dark);}catch{}
-  }, []);
+    try {
+      const dark = localStorage.getItem(themeKey) === "dark";
+      shellRef.current?.classList.toggle("dark", dark);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsDark(dark);
+    } catch {}
+  }, [themeKey]);
 
   const toggleTheme = useCallback(() => {
     const next = !shellRef.current!.classList.contains("dark");
     shellRef.current!.classList.toggle("dark", next);
     try {
-      localStorage.setItem("maildesk-ai-theme", next ? "dark" : "light");
+      localStorage.setItem(themeKey, next ? "dark" : "light");
     } catch {
       /* private mode */
     }
     setIsDark(next);
-  }, []);
+  }, [themeKey]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const res = await fetch("/api/ai/models");
-        const json = (await res.json()) as { models?: FreeModel[]; error?: string; configured?:boolean };
+        const json = (await res.json()) as {
+          models?: FreeModel[];
+          error?: string;
+          configured?: boolean;
+        };
         if (cancelled) return;
         if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
         setModels(json.models ?? []);
@@ -88,8 +113,12 @@ export default function HomePage({ embedded = false }: { embedded?: boolean } = 
         setModelsError(null);
         setSelectedId((prev) => prev ?? json.models?.[0]?.id ?? null);
       } catch (err) {
-        if (!cancelled) setModelsError(err instanceof Error ? err.message : "Failed to load models");
-      } finally { if(!cancelled)setModelsLoading(false);
+        if (!cancelled)
+          setModelsError(
+            err instanceof Error ? err.message : "Failed to load models",
+          );
+      } finally {
+        if (!cancelled) setModelsLoading(false);
       }
     })();
     return () => {
@@ -132,7 +161,14 @@ export default function HomePage({ embedded = false }: { embedded?: boolean } = 
       let mime: string;
       if (format === "json") {
         content = JSON.stringify(
-          { title, model: chat.conversations.find(c => c.id === chat.activeId)?.modelId ?? selectedId, exportedAt: new Date().toISOString(), messages: chat.messages },
+          {
+            title,
+            model:
+              chat.conversations.find((c) => c.id === chat.activeId)?.modelId ??
+              selectedId,
+            exportedAt: new Date().toISOString(),
+            messages: chat.messages,
+          },
           null,
           2,
         );
@@ -176,88 +212,171 @@ export default function HomePage({ embedded = false }: { embedded?: boolean } = 
   }, [chat]);
 
   return (
-    <div id="ai-studio-shell" ref={shellRef} className="ai-studio-shell"><div className="ai-studio-hostbar"><Link href="/">← Maildesk workspace</Link><strong>AI Studio<span>Free models</span></strong><a href="/auth/sign-out">Sign out</a></div><div className="ai-suite-nav"><SuiteNav active="ai"/></div><p className="ai-studio-privacy">Only messages and attachments you send here go to OpenRouter and its model providers. Chat history is saved in this browser.</p><div className="ai-studio-app flex min-h-0 flex-1 overflow-hidden">
-      {!embedded && <Sidebar
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onToggleTheme={toggleTheme}
-        isDark={isDark}
-        conversations={chat.conversations}
-        activeId={chat.activeId}
-        totalTokens={totalTokens}
-        onSelect={chat.select}
-        onDelete={chat.remove}
-      />}
+    <div id="ai-studio-shell" ref={shellRef} className="ai-studio-shell">
+      <div className="ai-studio-hostbar">
+        <Link href="/">← Maildesk workspace</Link>
+        <strong>
+          AI Studio<span>Free models</span>
+        </strong>
+        <a href="/auth/sign-out">Sign out</a>
+      </div>
+      <div className="ai-suite-nav">
+        <SuiteNav active="ai" />
+      </div>
+      <p className="ai-studio-privacy">
+        Only messages and attachments you send here go to OpenRouter and its
+        model providers. Chat history is saved in this browser.
+      </p>
+      <div className="ai-studio-app flex min-h-0 flex-1 overflow-hidden">
+        {!embedded && (
+          <Sidebar
+            open={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            onToggleTheme={toggleTheme}
+            isDark={isDark}
+            conversations={chat.conversations}
+            activeId={chat.activeId}
+            totalTokens={totalTokens}
+            onSelect={chat.select}
+            onDelete={chat.remove}
+          />
+        )}
 
-      <main className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-2 px-3 py-2.5">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="rounded-lg p-2 text-ink hover:bg-hover md:hidden"
-            aria-label="Open sidebar"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M3 6h18M3 12h18M3 18h18" />
-            </svg>
-          </button>
-          {embedded && <button className="suite-button" onClick={() => chat.select("")}>New chat</button>}
-          <ModelPicker models={models} selectedId={selectedId} onSelect={setSelectedId} />
-          {<>
-            <button disabled={chat.busy || importing} onClick={() => importInput.current?.click()} title="Import an AI Studio JSON export as a new local chat" className="rounded-lg px-2 py-1.5 text-xs font-medium text-ink-secondary transition-colors hover:bg-hover hover:text-ink disabled:opacity-40">{importing ? "Importing…" : "↑ Import JSON"}</button>
-            <input ref={importInput} type="file" accept=".json,application/json" aria-label="Import AI chat JSON" hidden onChange={async event => {
-              const file = event.target.files?.[0]; event.target.value = "";
-              if (!file) return;
-              setImporting(true); setImportStatus("");
-              try {
-                if (file.size > MAX_CHAT_IMPORT_BYTES) throw Error("Choose an AI Studio JSON export smaller than 10 MB.");
-                await chat.importChat(await file.text());
-                setImportStatus("Chat imported as a new copy in this browser. Nothing was sent to an AI provider.");
-              } catch (error) { setImportStatus(error instanceof Error ? error.message : "Chat import failed. Your existing chats were kept."); }
-              finally { setImporting(false); }
-            }} />
-          </>}
+        <main className="flex min-w-0 flex-1 flex-col">
+          <header className="flex items-center gap-2 px-3 py-2.5">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="rounded-lg p-2 text-ink hover:bg-hover md:hidden"
+              aria-label="Open sidebar"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <path d="M3 6h18M3 12h18M3 18h18" />
+              </svg>
+            </button>
+            {embedded && (
+              <button className="suite-button" onClick={() => chat.select("")}>
+                New chat
+              </button>
+            )}
+            <ModelPicker
+              models={models}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+            />
+            {
+              <>
+                <button
+                  disabled={chat.busy || importing}
+                  onClick={() => importInput.current?.click()}
+                  title="Import an AI Studio JSON export as a new local chat"
+                  className="rounded-lg px-2 py-1.5 text-xs font-medium text-ink-secondary transition-colors hover:bg-hover hover:text-ink disabled:opacity-40"
+                >
+                  {importing ? "Importing…" : "↑ Import JSON"}
+                </button>
+                <input
+                  ref={importInput}
+                  type="file"
+                  accept=".json,application/json"
+                  aria-label="Import AI chat JSON"
+                  hidden
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (!file) return;
+                    setImporting(true);
+                    setImportStatus("");
+                    try {
+                      if (file.size > MAX_CHAT_IMPORT_BYTES)
+                        throw Error(
+                          "Choose an AI Studio JSON export smaller than 10 MB.",
+                        );
+                      await chat.importChat(await file.text());
+                      setImportStatus(
+                        "Chat imported as a new copy in this browser. Nothing was sent to an AI provider.",
+                      );
+                    } catch (error) {
+                      setImportStatus(
+                        error instanceof Error
+                          ? error.message
+                          : "Chat import failed. Your existing chats were kept.",
+                      );
+                    } finally {
+                      setImporting(false);
+                    }
+                  }}
+                />
+              </>
+            }
 
-          {modelsError && (
-            <span className="ml-auto hidden truncate text-xs text-red-500 sm:block" title={modelsError}>
-              ⚠ {modelsError}
-            </span>
+            {modelsError && (
+              <span
+                className="ml-auto hidden truncate text-xs text-red-500 sm:block"
+                title={modelsError}
+              >
+                ⚠ {modelsError}
+              </span>
+            )}
+
+            {/* Export current conversation */}
+            {chat.messages.length > 0 && (
+              <div className="ml-auto flex items-center gap-1">
+                <button
+                  onClick={() => exportChat("md")}
+                  title="Export as Markdown"
+                  className="rounded-lg px-2 py-1.5 text-xs font-medium text-ink-secondary transition-colors hover:bg-hover hover:text-ink"
+                >
+                  ↓ MD
+                </button>
+                <button
+                  onClick={() => exportChat("json")}
+                  title="Export as JSON"
+                  className="rounded-lg px-2 py-1.5 text-xs font-medium text-ink-secondary transition-colors hover:bg-hover hover:text-ink"
+                >
+                  ↓ JSON
+                </button>
+              </div>
+            )}
+          </header>
+          {importStatus && (
+            <p
+              className="mx-auto w-full max-w-3xl px-6 pb-1 text-xs text-ink-secondary"
+              role="status"
+            >
+              {importStatus}
+            </p>
           )}
 
-          {/* Export current conversation */}
-          {chat.messages.length > 0 && (
-            <div className="ml-auto flex items-center gap-1">
-              <button
-                onClick={() => exportChat("md")}
-                title="Export as Markdown"
-                className="rounded-lg px-2 py-1.5 text-xs font-medium text-ink-secondary transition-colors hover:bg-hover hover:text-ink"
-              >
-                ↓ MD
-              </button>
-              <button
-                onClick={() => exportChat("json")}
-                title="Export as JSON"
-                className="rounded-lg px-2 py-1.5 text-xs font-medium text-ink-secondary transition-colors hover:bg-hover hover:text-ink"
-              >
-                ↓ JSON
-              </button>
+          {!modelsLoading && !configured && (
+            <div className="ai-studio-setup" role="status">
+              AI setup is incomplete. Add the OpenRouter key in the site’s
+              server settings to enable messages.
             </div>
           )}
-        </header>
-        {importStatus && <p className="mx-auto w-full max-w-3xl px-6 pb-1 text-xs text-ink-secondary" role="status">{importStatus}</p>}
-
-        {!modelsLoading&&!configured&&<div className="ai-studio-setup" role="status">AI setup is incomplete. Add the OpenRouter key in the site’s server settings to enable messages.</div>}
-        {modelsError&&<p className="ai-studio-setup" role="alert">{modelsError} <button onClick={()=>location.reload()}>Try again</button></p>}
-        <>
-        <div
-          ref={scrollRef}
-          onScroll={() => {
-            const el = scrollRef.current;
-            if (!el) return;
-            nearBottomRef.current =
-              el.scrollHeight - el.scrollTop - el.clientHeight < 120;
-          }}
-          className="flex flex-1 flex-col overflow-y-auto"
-        >
+          {modelsError && (
+            <p className="ai-studio-setup" role="alert">
+              {modelsError}{" "}
+              <button onClick={() => location.reload()}>Try again</button>
+            </p>
+          )}
+          <>
+            <div
+              ref={scrollRef}
+              onScroll={() => {
+                const el = scrollRef.current;
+                if (!el) return;
+                nearBottomRef.current =
+                  el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+              }}
+              className="flex flex-1 flex-col overflow-y-auto"
+            >
               {chat.messages.length === 0 ? (
                 !modelsLoading && models.length > 0 ? (
                   <EmptyState
@@ -266,7 +385,10 @@ export default function HomePage({ embedded = false }: { embedded?: boolean } = 
                   />
                 ) : (
                   <div className="flex flex-1 items-center justify-center text-sm text-ink-secondary">
-                    {modelsLoading?"Loading free models…":modelsError??"No free chat models are available right now."}
+                    {modelsLoading
+                      ? "Loading free models…"
+                      : (modelsError ??
+                        "No free chat models are available right now.")}
                   </div>
                 )
               ) : (
@@ -283,7 +405,10 @@ export default function HomePage({ embedded = false }: { embedded?: boolean } = 
             </div>
 
             {chat.error && (
-              <p className="mx-auto w-full max-w-3xl px-6 pb-1 text-xs text-red-500" role="alert">
+              <p
+                className="mx-auto w-full max-w-3xl px-6 pb-1 text-xs text-red-500"
+                role="alert"
+              >
                 ⚠ {chat.error}
               </p>
             )}
@@ -292,19 +417,21 @@ export default function HomePage({ embedded = false }: { embedded?: boolean } = 
               <SettingsBar settings={settings} onChange={updateSettings} />
               <Composer
                 ref={composerRef}
-                disabled={!configured||!selectedId||models.length===0}
+                disabled={!configured || !selectedId || models.length === 0}
                 busy={chat.busy}
                 visionReady={selected?.vision ?? false}
                 hint="Verified free models · Enter to send · Shift+Enter for a new line"
                 onSubmit={(text, attachments) => {
-                  if (!selectedId && models.length > 0) setSelectedId(models[0].id);
+                  if (!selectedId && models.length > 0)
+                    setSelectedId(models[0].id);
                   return chat.send(text, attachments);
                 }}
                 onStop={chat.stop}
               />
             </div>
-        </>
-      </main>
-    </div></div>
+          </>
+        </main>
+      </div>
+    </div>
   );
 }

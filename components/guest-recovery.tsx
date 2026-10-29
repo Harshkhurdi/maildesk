@@ -1,4 +1,5 @@
 "use client";
+import { GuestEntry } from "./guest-entry";
 import { useState } from "react";
 import { download } from "@/lib/exporters";
 export function GuestRecovery() {
@@ -6,11 +7,17 @@ export function GuestRecovery() {
   return (
     <main className="auth-page">
       <section className="auth-card">
-        <h1>Your earlier work is kept.</h1>
+        <h1>Your full guest workspace.</h1>
         <p>
-          Guest editing has been retired. Download a copy of the tasks, Office
-          files and saved tools from this browser before moving to your private
-          workspace.
+          Start without an email or password. All five apps are available in
+          your own workspace. Your guest access stays in this browser for 30
+          days; download important files before signing out or clearing cookies.
+          Email and calendar use your own Google account.
+        </p>
+        <GuestEntry />
+        <p>
+          Have work from the earlier guest editor? The backup below leaves it
+          untouched.
         </p>
         <button
           className="button primary"

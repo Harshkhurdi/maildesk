@@ -1,6 +1,7 @@
 // Isolated browser UI checks. Providers are mocked; no real email/calendar action is sent.
 import assert from "node:assert/strict";
 import JSZip from "jszip";
+import { NEON_AUTH_SESSION_COOKIE_NAME } from "@neondatabase/auth/server";
 import { access, mkdir, rm, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
@@ -93,7 +94,16 @@ try {
         "--port",
         "5274",
       ],
-      { cwd: root, stdio: ["ignore", "inherit", "inherit"] },
+      {
+        cwd: root,
+        stdio: ["ignore", "inherit", "inherit"],
+        env: {
+          ...process.env,
+          NEON_AUTH_COOKIE_SECRET:
+            "fixture-only-guest-cookie-secret-0123456789",
+          APP_ORIGIN: base,
+        },
+      },
     );
     let available = false;
     for (let attempt = 0; attempt < 120; attempt++) {
@@ -140,6 +150,11 @@ try {
         contentType: "application/json",
         body: JSON.stringify(json),
       });
+    if (path.startsWith("/api/guest/")) return route.continue();
+    if (path.includes("/api/auth/email-otp/send-verification-otp")) {
+      assert.equal(request.postDataJSON().type, "sign-in");
+      return send({ success: true });
+    }
     if (path === "/api/workspace")
       return send({
         accounts: [account],
@@ -225,7 +240,72 @@ try {
     caret: "initial",
     fullPage: true,
   });
-  await page.goto(base + "/maildesk-qa-fixture");
+  await page
+    .getByRole("link", { name: "Create an account", exact: true })
+    .click();
+  await page.getByRole("heading", { name: "Create your workspace." }).waitFor();
+  await page
+    .getByRole("textbox", { name: "Email address", exact: true })
+    .fill("guest-member@example.test");
+  await page
+    .getByRole("button", { name: "Create account with email", exact: true })
+    .click();
+  await page
+    .getByRole("textbox", { name: "Verification code", exact: true })
+    .waitFor();
+  await page.evaluate(
+    () =>
+      new Promise((resolve, reject) => {
+        const req = indexedDB.open("maildesk-ai-studio", 2);
+        req.onupgradeneeded = () => {
+          for (const name of ["conversations", "generations"])
+            if (!req.result.objectStoreNames.contains(name))
+              req.result.createObjectStore(name, { keyPath: "id" });
+        };
+        req.onsuccess = () => {
+          const db = req.result,
+            tx = db.transaction("conversations", "readwrite");
+          tx.objectStore("conversations").put({
+            id: "owner-private",
+            title: "Owner private chat should stay hidden",
+            modelId: "test:free",
+            messages: [],
+            updatedAt: 1,
+            createdAt: 1,
+          });
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        };
+        req.onerror = () => reject(req.error);
+      }),
+  );
+  await page
+    .getByRole("button", { name: "Continue as guest", exact: true })
+    .click();
+  await page.getByText("Guest workspace", { exact: true }).waitFor();
+  const guestCookie = (await context.cookies()).find(
+    (c) => c.name === "maildesk-guest-session",
+  );
+  assert(guestCookie?.httpOnly);
+  assert.equal(guestCookie.sameSite, "Lax");
+  assert(
+    !(await context.cookies()).some(
+      (c) => c.name === NEON_AUTH_SESSION_COOKIE_NAME,
+    ),
+  );
+  const guestId = JSON.parse(
+    Buffer.from(guestCookie.value.split(".")[0], "base64url"),
+  ).id;
+  assert.equal(
+    await page.evaluate(() =>
+      document.cookie.includes("maildesk-guest-session"),
+    ),
+    false,
+  );
+
   await page.getByRole("heading", { name: "MailDesk Word" }).waitFor();
   assert.equal(
     await page
@@ -500,9 +580,36 @@ try {
     ),
     "Word workspace overflows the mobile viewport",
   );
+  await page.goto(base + "/ai-studio");
+  await page.locator("#ai-studio-shell").waitFor();
+  await page.waitForFunction(
+    async (id) =>
+      (await indexedDB.databases()).some(
+        (db) => db.name === "maildesk-ai-studio:" + id,
+      ),
+    guestId,
+  );
+  assert.equal(
+    await page
+      .getByText("Owner private chat should stay hidden", { exact: true })
+      .count(),
+    0,
+  );
+  await page.goto(base + "/auth/sign-out");
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Continue as guest", exact: true })
+    .waitFor();
+  assert(
+    !(await context.cookies()).some((c) => c.name === "maildesk-guest-session"),
+  );
+  assert.equal(
+    (await context.request.get(base + "/api/office/files")).status(),
+    401,
+  );
   assert.deepEqual(errors, [], "Browser console errors");
   console.log(
-    "PASS: five-app navigation, real Word/Excel/PowerPoint create/edit/save, failed-save recovery, PDF exports, history/AI panel, sanitized threads, reply draft/send, calendar views/event form, mobile Word layout. All provider writes were mocked.",
+    "PASS: real guest signup/cookies/logout, email signup UI, isolated AI history, five-app navigation, real Word/Excel/PowerPoint create/edit/save, failed-save recovery, PDF exports, history/AI panel, sanitized threads, reply draft/send, calendar views/event form, mobile Word layout. All provider writes were mocked.",
   );
 } finally {
   await browser?.close();

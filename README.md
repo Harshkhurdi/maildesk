@@ -25,6 +25,16 @@ Outlook supports **Gmail and Google Calendar**, not Microsoft/Exchange accounts:
 
 Free AI Studio retains streaming, settings, saved browser conversations, explicit attachments and import/export, with verified zero-price model enforcement. Calling, person-to-person messaging, code execution, tasks, shopping and web utility routes are retired. The original tables and browser keys remain; no data-drop migration is included. Google disconnect disables the credential without deleting files, cached mail or retired records.
 
+## Guest access and signup
+
+The sign-in page offers **Continue as guest** and **Create an account**. Both can use all five apps. A guest gets a server-issued, HTTP-only, signed session and an independent workspace, without an email or password. Email signup uses the existing verified email-code flow; new verified users are no longer blocked by the original owner-only gate.
+
+Guests connect **their own** Google accounts for Gmail/Calendar; no owner connection, file or credential is shared. Google’s consent-screen/testing-user/API restrictions still apply. File and provider queries enforce the current identity’s ownership, and mutation origins remain checked. AI history/settings are separated per identity in the browser, while the configured original owner keeps the existing AI database/settings keys.
+
+Guest access lasts **30 days in the same browser**. Ending the guest session or clearing cookies removes access; download important work. Email signup opens a separate account workspace and does not automatically move guest files. Earlier guest backups remain on `/guest`, with no recovery/backup link on the sign-in page. Server records are not automatically purged, and there is no new background job or polling loop.
+
+Guest session signing reuses the existing `NEON_AUTH_COOKIE_SECRET` with a separate HMAC purpose. No Firebase, extra auth service, database migration or new secret is required. Guest creation verifies the origin, bounds its input and clears earlier Neon browser cookies when explicitly switching to guest, preventing accidental owner access. Normal verified email sessions take priority over a saved guest cookie.
+
 ## Setup on Vercel
 
 Use Node **24.x**. Keep all existing credentials and especially the token-encryption key.
@@ -40,7 +50,7 @@ cp .env.example .env.local
 | `DATABASE_URL_UNPOOLED` | Optional direct connection for migrations |
 | `NEON_AUTH_BASE_URL` | Existing Neon Auth endpoint |
 | `NEON_AUTH_COOKIE_SECRET` | Existing authentication cookie secret |
-| `WORKSPACE_OWNER_EMAIL` | Verified owner of the private suite |
+| `WORKSPACE_OWNER_EMAIL` | Original owner identity used to preserve existing browser-local AI history; other verified accounts and guests have separate workspaces |
 | `APP_ORIGIN` | Exact public HTTPS origin |
 | `TOKEN_ENCRYPTION_KEY` | Existing 32-byte AES key, encoded as base64url |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google web OAuth client |

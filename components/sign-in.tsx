@@ -2,15 +2,20 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ShieldCheck, ArrowRight, LayoutGrid, Cloud } from "lucide-react";
+import { GuestEntry } from "./guest-entry";
 import { AppIcon } from "./office-brand";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { authClient } from "@/lib/auth-client";
 export default function SignIn({
   returnTo,
   signOut = false,
+  guestSession = false,
+  signup = false,
 }: {
   returnTo: string;
   signOut?: boolean;
+  guestSession?: boolean;
+  signup?: boolean;
 }) {
   const [email, setEmail] = useState(""),
     [otp, setOtp] = useState(""),
@@ -52,11 +57,21 @@ export default function SignIn({
             </span>
             MailDesk
           </Link>
-          <h1>{signOut ? "Sign out of MailDesk" : "Your work starts here."}</h1>
+          <h1>
+            {signOut
+              ? "Sign out of MailDesk"
+              : signup
+                ? "Create your workspace."
+                : "Your work starts here."}
+          </h1>
           <p>
             {signOut
-              ? "Sign out of your private workspace on this device."
-              : "One private workspace for documents, spreadsheets, presentations and email. Sign in to pick up where you left off."}
+              ? guestSession
+                ? "Ending guest access removes this browser’s guest session. Download any important work before signing out."
+                : "Sign out of your workspace on this device."
+              : signup
+                ? "Create an account with your email and a verification code. Your files, connected Google accounts and AI history stay separate from everyone else’s."
+                : "One private workspace for documents, spreadsheets, presentations and email. Sign in to pick up where you left off."}
           </p>
           {error && (
             <div className="utility-notice utility-error" role="alert">
@@ -70,7 +85,13 @@ export default function SignIn({
               onClick={async () => {
                 setBusy(true);
                 try {
-                  const r = await authClient.signOut();
+                  const ended = await fetch("/api/guest/end", {
+                    method: "POST",
+                  });
+                  if (!ended.ok) throw Error("Guest sign-out did not finish.");
+                  const r = guestSession
+                    ? { error: null }
+                    : await authClient.signOut();
                   if (r.error) throw Error(r.error.message);
                   window.location.assign("/auth/sign-in");
                 } catch (e) {
@@ -83,6 +104,14 @@ export default function SignIn({
             </button>
           ) : (
             <form onSubmit={submit}>
+              <p className="auth-signup-switch">
+                {signup ? "Already have an account?" : "New to MailDesk?"}{" "}
+                <Link
+                  href={signup ? "/auth/sign-in" : "/auth/sign-in?signup=1"}
+                >
+                  {signup ? "Sign in" : "Create an account"}
+                </Link>
+              </p>
               <label>
                 Email address
                 <input
@@ -123,7 +152,9 @@ export default function SignIn({
                   ? "Please wait…"
                   : sent
                     ? "Open my workspace"
-                    : "Continue with email"}
+                    : signup
+                      ? "Create account with email"
+                      : "Continue with email"}
                 <ArrowRight size={14} />
               </button>
               {sent && (
@@ -142,23 +173,16 @@ export default function SignIn({
             </form>
           )}
           {!signOut && (
-            <>
-              <a
-                href="/guest"
-                className="button"
-                style={{
-                  marginTop: 14,
-                  width: "100%",
-                  justifyContent: "center",
-                }}
-              >
-                Recover earlier browser data
-                <ArrowRight size={14} />
-              </a>
-              <p className="utility-muted" style={{ marginTop: 10 }}>
-                Download a backup of work saved in the earlier guest workspace.
+            <div className="guest-entry">
+              <span className="guest-entry-divider">
+                or explore without email
+              </span>
+              <GuestEntry />
+              <p>
+                Use Word, Excel, PowerPoint, Outlook and Free AI Studio. Connect
+                your own Google account for email and calendar.
               </p>
-            </>
+            </div>
           )}
           <p className="utility-muted" style={{ marginTop: 25 }}>
             <ShieldCheck
