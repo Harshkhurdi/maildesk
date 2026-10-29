@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
   reactStrictMode: true,
+  allowedDevOrigins: ["terminal.local"],
   outputFileTracingRoot: process.cwd(),
   webpack(config, { isServer, webpack }) {
     if (!isServer)

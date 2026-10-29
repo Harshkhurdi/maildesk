@@ -16,6 +16,15 @@ export function SuiteNav({
           <a
             key={app.id}
             aria-label={app.name}
+            data-mobile-label={
+              {
+                document: "Word",
+                sheet: "Excel",
+                slides: "Slides",
+                outlook: "Mail",
+                ai: "AI",
+              }[app.id]
+            }
             aria-current={active === app.id ? "page" : undefined}
             title={app.name}
             className={active === app.id ? "active" : ""}
@@ -37,6 +46,7 @@ export function SuiteNav({
           href="/pdf"
           title="PDF reader and markup"
           aria-label="PDF reader"
+          data-mobile-label="PDF"
           aria-current={active === "pdf" ? "page" : undefined}
           className={active === "pdf" ? "active pdf-nav-link" : "pdf-nav-link"}
         >

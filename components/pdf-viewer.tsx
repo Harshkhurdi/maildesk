@@ -30,6 +30,9 @@ import {
   MessageSquare,
   Save,
   Trash2,
+  MoreHorizontal,
+  Check,
+  ArrowRight,
 } from "lucide-react";
 import type {
   PDFDocumentProxy,
@@ -119,9 +122,7 @@ export default function PdfViewer({
     [hits, setHits] = useState<Hit[]>([]),
     [searching, setSearching] = useState(false),
     [searchProgress, setSearchProgress] = useState(0),
-    [panel, setPanel] = useState<"pages" | "outline" | "search" | null>(
-      "pages",
-    ),
+    [panel, setPanel] = useState<"pages" | "outline" | "search" | null>(null),
     [showText, setShowText] = useState(false),
     [showComments, setShowComments] = useState(false),
     [pageText, setPageText] = useState(""),
@@ -163,7 +164,7 @@ export default function PdfViewer({
     const el = stage.current;
     if (!el) return;
     const observer = new ResizeObserver((entries) =>
-      setWidth(Math.max(180, entries[0].contentRect.width - 48)),
+      setWidth(Math.max(180, entries[0].contentRect.width)),
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -181,6 +182,7 @@ export default function PdfViewer({
     let active = true,
       task: PDFDocumentLoadingTask | undefined;
     setPdf(null);
+    setPanel(window.matchMedia("(min-width: 900px)").matches ? "pages" : null);
     setPage(1);
     setZoom(1);
     setFit(true);
@@ -772,7 +774,7 @@ export default function PdfViewer({
   }
   return (
     <section
-      className={`pdf-viewer acrobat-viewer ${expanded ? "expanded" : ""}`}
+      className={`pdf-viewer acrobat-viewer ${source ? "is-reading" : "is-welcome"} ${expanded ? "expanded" : ""}`}
       onDragOver={(event) => {
         event.preventDefault();
         if (event.dataTransfer.types.includes("Files")) setDragging(true);
@@ -800,197 +802,242 @@ export default function PdfViewer({
           event.target.value = "";
         }}
       />
-      <div className="pdf-toolbar">
-        <button
-          className="pdf-tool"
-          aria-label="Toggle PDF sidebar"
-          title="Pages and bookmarks"
-          disabled={!pdf}
-          onClick={() => setPanel(panel ? null : "pages")}
-        >
-          <PanelLeft size={18} />
-        </button>
-        <button
-          className="button small"
-          onClick={() => fileInput.current?.click()}
-        >
-          <Upload size={14} />
-          {source ? "Open another PDF" : "Open PDF"}
-        </button>
-        {source && (
-          <>
-            <span className="pdf-filename" title={source.name}>
-              {source.name}
-            </span>
-            <span className="pdf-toolbar-divider" />
-            <button
-              className="pdf-tool"
-              aria-label="Previous PDF page"
-              disabled={!pdf || page <= 1}
-              onClick={() => jump(page - 1)}
-            >
-              <ChevronLeft size={17} />
-            </button>
-            <form
-              className="pdf-page-control"
-              onSubmit={(event) => {
-                event.preventDefault();
-                jump(Number(pageDraft));
-              }}
-            >
-              <input
-                aria-label="PDF page number"
-                type="number"
-                min={1}
-                max={pdf?.numPages ?? 1}
-                value={pageDraft}
-                disabled={!pdf}
-                onChange={(event) => setPageDraft(event.target.value)}
-                onBlur={() => {
-                  jump(Number(pageDraft));
-                  setPageDraft(
-                    String(
-                      Math.max(
-                        1,
-                        Math.min(pdf?.numPages ?? 1, Number(pageDraft) || 1),
-                      ),
-                    ),
-                  );
-                }}
-              />
-              <span>of {pdf?.numPages ?? "…"}</span>
-            </form>
-            <button
-              className="pdf-tool"
-              aria-label="Next PDF page"
-              disabled={!pdf || page >= pdf.numPages}
-              onClick={() => jump(page + 1)}
-            >
-              <ChevronRight size={17} />
-            </button>
-            <span className="pdf-toolbar-divider" />
-            <button
-              className="pdf-tool"
-              aria-label="Zoom PDF out"
-              disabled={!pdf}
-              onClick={() =>
-                changeZoom((fit ? actualScale.current : zoom) - 0.25)
-              }
-            >
-              <ZoomOut size={16} />
-            </button>
-            <select
-              className="pdf-zoom"
-              aria-label="PDF zoom"
-              disabled={!pdf}
-              value={fit ? "fit" : String(zoom)}
-              onChange={(event) =>
-                event.target.value === "fit"
-                  ? setFit(true)
-                  : changeZoom(Number(event.target.value))
-              }
-            >
-              <option value="fit">Fit width</option>
-              {[0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 4].map((n) => (
-                <option key={n} value={n}>
-                  {Math.round(n * 100)}%
-                </option>
-              ))}
-            </select>
-            <button
-              className="pdf-tool"
-              aria-label="Zoom PDF in"
-              disabled={!pdf}
-              onClick={() =>
-                changeZoom((fit ? actualScale.current : zoom) + 0.25)
-              }
-            >
-              <ZoomIn size={16} />
-            </button>
-            <button
-              className="pdf-tool"
-              aria-label="Rotate PDF clockwise"
-              title="Rotate view clockwise"
-              disabled={!pdf}
-              onClick={() => setRotation((r) => (r + 90) % 360)}
-            >
-              <RotateCw size={16} />
-            </button>
-            <button
-              className={`pdf-tool ${panel === "search" ? "active" : ""}`}
-              aria-label="Search PDF text"
-              title="Find text (Ctrl+F)"
-              disabled={!pdf}
-              onClick={() => setPanel(panel === "search" ? null : "search")}
-            >
-              <Search size={16} />
-            </button>
-            <button
-              className="pdf-tool"
-              aria-label="Show PDF page text"
-              disabled={!pdf}
-              onClick={() => setShowText(!showText)}
-            >
-              <TextSelect size={16} />
-            </button>
-            <span className="pdf-toolbar-spacer" />
-            <button
-              className="pdf-tool"
-              aria-label="Print PDF"
-              title="Print"
-              disabled={!pdf || exporting}
-              onClick={() => void print()}
-            >
-              <Printer size={17} />
-            </button>
-            <button
-              className="pdf-tool"
-              aria-label="Download PDF"
-              title="Download original"
-              onClick={() => download(source.blob, source.name)}
-            >
-              <Download size={17} />
-            </button>
-            <button
-              className="button small primary"
-              aria-label="Download marked PDF"
-              disabled={!pdf || exporting}
-              onClick={() => void saveCopy()}
-            >
-              <Save size={14} />
-              {exporting ? "Preparing…" : "Save copy"}
-            </button>
-            {blobUrl && (
-              <a
-                className="pdf-tool"
-                aria-label="Open PDF in browser"
-                title="Open original in browser"
-                href={blobUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+      {source && (
+        <>
+          <div className="pdf-documentbar">
+            <div className="pdf-document-identity">
+              <span className="pdf-document-icon">
+                <FileText size={23} />
+              </span>
+              <div>
+                <strong title={source.name}>{source.name}</strong>
+                <span>
+                  <i />
+                  {dirty ? "Unsaved changes" : "Private document"}
+                  <b>·</b>
+                  {pdf ? `${pdf.numPages} pages` : "Opening…"}
+                </span>
+              </div>
+            </div>
+            <div className="pdf-document-actions">
+              <button
+                className="button primary pdf-save"
+                aria-label="Download marked PDF"
+                disabled={!pdf || exporting}
+                onClick={() => void saveCopy()}
               >
-                <ArrowUpRight size={17} />
-              </a>
-            )}
-            <button
-              className="pdf-tool"
-              aria-label={
-                expanded ? "Exit PDF focus view" : "Expand PDF viewer"
-              }
-              onClick={() => setExpanded(!expanded)}
-            >
-              <Maximize2 size={17} />
-            </button>
-            <button
-              className="pdf-tool"
-              aria-label="Close PDF"
-              onClick={() => changeSource(null)}
-            >
-              <X size={17} />
-            </button>
-          </>
-        )}
-      </div>
+                <Download size={16} />
+                <span>{exporting ? "Preparing…" : "Save copy"}</span>
+              </button>
+              <details
+                className="pdf-more"
+                onClick={(event) => {
+                  if ((event.target as HTMLElement).closest("button,a"))
+                    event.currentTarget.removeAttribute("open");
+                }}
+              >
+                <summary
+                  aria-label="More PDF actions"
+                  title="More document actions"
+                >
+                  <MoreHorizontal size={22} />
+                </summary>
+                <div className="pdf-action-menu">
+                  <button onClick={() => fileInput.current?.click()}>
+                    <Upload size={17} />
+                    Open another PDF
+                  </button>
+                  <button
+                    aria-label="Download PDF"
+                    onClick={() => download(source.blob, source.name)}
+                  >
+                    <Download size={17} />
+                    Download original
+                  </button>
+                  <button
+                    aria-label="Print PDF"
+                    disabled={!pdf || exporting}
+                    onClick={() => void print()}
+                  >
+                    <Printer size={17} />
+                    Print document
+                  </button>
+                  {blobUrl && (
+                    <a
+                      aria-label="Open PDF in browser"
+                      href={blobUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ArrowUpRight size={17} />
+                      Open in browser
+                    </a>
+                  )}
+                  <button
+                    aria-label={
+                      expanded ? "Exit PDF focus view" : "Expand PDF viewer"
+                    }
+                    onClick={() => setExpanded(!expanded)}
+                  >
+                    <Maximize2 size={17} />
+                    {expanded ? "Exit focus view" : "Focus view"}
+                  </button>
+                  <button
+                    className="pdf-close-action"
+                    aria-label="Close PDF"
+                    onClick={() => changeSource(null)}
+                  >
+                    <X size={17} />
+                    Close document
+                  </button>
+                </div>
+              </details>
+            </div>
+          </div>
+          <div className="pdf-toolbar">
+            <div className="pdf-view-controls">
+              <button
+                className={`pdf-labeled-tool ${panel === "pages" || panel === "outline" ? "active" : ""}`}
+                aria-label="Toggle PDF sidebar"
+                aria-expanded={!!panel}
+                disabled={!pdf}
+                onClick={() => {
+                  setPanel(panel ? null : "pages");
+                  setShowComments(false);
+                  setShowText(false);
+                }}
+              >
+                <PanelLeft size={17} />
+                <span>Pages</span>
+              </button>
+              <button
+                className={`pdf-labeled-tool ${panel === "search" ? "active" : ""}`}
+                aria-label="Search PDF text"
+                disabled={!pdf}
+                onClick={() => {
+                  setPanel(panel === "search" ? null : "search");
+                  setShowComments(false);
+                  setShowText(false);
+                }}
+              >
+                <Search size={17} />
+                <span>Find</span>
+              </button>
+              <button
+                className="pdf-labeled-tool"
+                aria-label="Rotate PDF clockwise"
+                title="Rotate view"
+                disabled={!pdf}
+                onClick={() => setRotation((r) => (r + 90) % 360)}
+              >
+                <RotateCw size={17} />
+                <span>Rotate</span>
+              </button>
+              <button
+                className="pdf-labeled-tool"
+                aria-label="Show PDF page text"
+                aria-pressed={showText}
+                disabled={!pdf}
+                onClick={() => {
+                  setShowText(!showText);
+                  setShowComments(false);
+                  setPanel(null);
+                }}
+              >
+                <TextSelect size={17} />
+                <span>Text</span>
+              </button>
+            </div>
+            <div className="pdf-page-navigation">
+              <button
+                className="pdf-tool"
+                aria-label="Previous PDF page"
+                disabled={!pdf || page <= 1}
+                onClick={() => jump(page - 1)}
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <form
+                className="pdf-page-control"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  jump(Number(pageDraft));
+                }}
+              >
+                <input
+                  aria-label="PDF page number"
+                  type="number"
+                  min={1}
+                  max={pdf?.numPages ?? 1}
+                  value={pageDraft}
+                  disabled={!pdf}
+                  onChange={(event) => setPageDraft(event.target.value)}
+                  onBlur={() => {
+                    jump(Number(pageDraft));
+                    setPageDraft(
+                      String(
+                        Math.max(
+                          1,
+                          Math.min(pdf?.numPages ?? 1, Number(pageDraft) || 1),
+                        ),
+                      ),
+                    );
+                  }}
+                />
+                <span>/ {pdf?.numPages ?? "…"}</span>
+              </form>
+              <button
+                className="pdf-tool"
+                aria-label="Next PDF page"
+                disabled={!pdf || page >= pdf.numPages}
+                onClick={() => jump(page + 1)}
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+            <div className="pdf-zoom-controls">
+              <button
+                className="pdf-tool"
+                aria-label="Zoom PDF out"
+                disabled={!pdf}
+                onClick={() =>
+                  changeZoom((fit ? actualScale.current : zoom) - 0.25)
+                }
+              >
+                <ZoomOut size={17} />
+              </button>
+              <select
+                className="pdf-zoom"
+                aria-label="PDF zoom"
+                disabled={!pdf}
+                value={fit ? "fit" : String(zoom)}
+                onChange={(event) =>
+                  event.target.value === "fit"
+                    ? setFit(true)
+                    : changeZoom(Number(event.target.value))
+                }
+              >
+                <option value="fit">Fit width</option>
+                {Array.from({ length: 16 }, (_, i) => (i + 1) / 4).map((n) => (
+                  <option key={n} value={n}>
+                    {Math.round(n * 100)}%
+                  </option>
+                ))}
+              </select>
+              <button
+                className="pdf-tool"
+                aria-label="Zoom PDF in"
+                disabled={!pdf}
+                onClick={() =>
+                  changeZoom((fit ? actualScale.current : zoom) + 0.25)
+                }
+              >
+                <ZoomIn size={17} />
+              </button>
+            </div>
+          </div>
+        </>
+      )}
       {error && (
         <div className="pdf-error" role="alert">
           <span>{error}</span>
@@ -1002,6 +1049,16 @@ export default function PdfViewer({
       <div className={`pdf-reader ${source ? "has-document" : ""}`}>
         {source && pdf && panel && (
           <aside className="pdf-navigation">
+            <div className="pdf-panel-header">
+              <strong>Document navigation</strong>
+              <button
+                className="pdf-tool"
+                aria-label="Close PDF sidebar"
+                onClick={() => setPanel(null)}
+              >
+                <X size={17} />
+              </button>
+            </div>
             <div className="pdf-panel-tabs">
               <button
                 className={panel === "pages" ? "active" : ""}
@@ -1092,28 +1149,123 @@ export default function PdfViewer({
         >
           {!source ? (
             <div className="pdf-empty">
-              <span className="pdf-empty-icon">
-                <FileText size={38} />
-              </span>
-              <p className="eyebrow">READ · MARK UP · FILL · PRINT</p>
-              <h2>Your PDF workspace.</h2>
-              <p>
-                Drop a PDF here, or choose a file.
-                <br />
-                Find text, add highlights and notes, draw, and fill standard
-                forms.
-              </p>
-              <button
-                className="button primary"
-                onClick={() => fileInput.current?.click()}
-              >
-                <Upload size={16} />
-                Choose a PDF
-              </button>
-              <span className="pdf-private">
-                <ShieldCheck size={14} />
-                Files stay on this device · up to 100 MB
-              </span>
+              <div className="pdf-welcome-main">
+                <div className="pdf-welcome-copy">
+                  <span className="pdf-welcome-kicker">
+                    <span />
+                    YOUR PERSONAL PDF STUDIO
+                  </span>
+                  <h1>
+                    Your documents.
+                    <br />
+                    <em>A clearer view.</em>
+                  </h1>
+                  <p>
+                    Read, annotate and fill PDFs in one focused workspace. A
+                    little less clutter. A lot more clarity.
+                  </p>
+                  <button
+                    className="button primary pdf-open-primary"
+                    onClick={() => fileInput.current?.click()}
+                  >
+                    <Upload size={18} />
+                    Open a PDF
+                    <ArrowRight size={17} />
+                  </button>
+                  <span className="pdf-drop-hint">
+                    or drop a file here · up to 100 MB
+                  </span>
+                  <span className="pdf-private">
+                    <ShieldCheck size={15} />
+                    Your files stay on your device.
+                  </span>
+                </div>
+                <div className="pdf-welcome-art" aria-hidden="true">
+                  <div className="pdf-art-orbit" />
+                  <div className="pdf-art-paper">
+                    <div className="pdf-art-paper-top">
+                      <span className="pdf-art-brand">
+                        M<span>—</span>
+                      </span>
+                      <span>WORKING DOCUMENT / 01</span>
+                    </div>
+                    <span className="pdf-art-eyebrow">A NEW PERSPECTIVE</span>
+                    <h2>
+                      Good ideas.
+                      <br />
+                      Clearly expressed.
+                    </h2>
+                    <p className="pdf-art-intro">
+                      Make every page a little more meaningful.
+                    </p>
+                    <div className="pdf-art-lines">
+                      <i />
+                      <i />
+                      <i />
+                      <i />
+                    </div>
+                    <div className="pdf-art-chart">
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                    <div className="pdf-art-bottom">
+                      <span>PROJECT OVERVIEW</span>
+                      <span>01 / 08</span>
+                    </div>
+                  </div>
+                  <div className="pdf-art-note">
+                    <span>
+                      <Check size={13} />
+                    </span>
+                    <div>
+                      <strong>One final touch.</strong>
+                      <p>Ready for the next chapter.</p>
+                    </div>
+                  </div>
+                  <div className="pdf-art-tool">
+                    <Highlighter size={20} />
+                    <Pencil size={20} />
+                    <StickyNote size={20} />
+                  </div>
+                  <span className="pdf-art-label">PDF</span>
+                </div>
+              </div>
+              <div className="pdf-welcome-features">
+                <div>
+                  <span>
+                    <Search size={20} />
+                  </span>
+                  <div>
+                    <h2>Read & navigate</h2>
+                    <p>
+                      Find a phrase. Jump to a page. See the bigger picture.
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <span>
+                    <Highlighter size={20} />
+                  </span>
+                  <div>
+                    <h2>Mark up & review</h2>
+                    <p>Highlight the details. Draw freely. Leave a note.</p>
+                  </div>
+                </div>
+                <div>
+                  <span>
+                    <Save size={20} />
+                  </span>
+                  <div>
+                    <h2>Fill & take it with you</h2>
+                    <p>Complete forms and download a copy with your changes.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : needsPassword ? (
             <form
@@ -1335,6 +1487,7 @@ export default function PdfViewer({
               onClick={() => setTool("select")}
             >
               <MousePointer2 size={20} />
+              <span>Select</span>
             </button>
             <button
               className={tool === "highlight" ? "active" : ""}
@@ -1344,6 +1497,7 @@ export default function PdfViewer({
               onClick={highlightSelection}
             >
               <Highlighter size={20} />
+              <span>Highlight</span>
             </button>
             <button
               className={tool === "ink" ? "active" : ""}
@@ -1352,6 +1506,7 @@ export default function PdfViewer({
               onClick={() => setTool(tool === "ink" ? "select" : "ink")}
             >
               <Pencil size={20} />
+              <span>Draw</span>
             </button>
             <button
               className={tool === "note" ? "active" : ""}
@@ -1360,6 +1515,7 @@ export default function PdfViewer({
               onClick={() => setTool(tool === "note" ? "select" : "note")}
             >
               <StickyNote size={20} />
+              <span>Note</span>
             </button>
             <span />
             <button
@@ -1391,9 +1547,15 @@ export default function PdfViewer({
               aria-label="Show PDF comments"
               title="Comments and markups"
               className={showComments ? "active" : ""}
-              onClick={() => setShowComments(!showComments)}
+              onClick={() => {
+                setShowComments(!showComments);
+                setShowText(false);
+                if (window.matchMedia("(max-width: 760px)").matches)
+                  setPanel(null);
+              }}
             >
               <MessageSquare size={20} />
+              <span>Notes</span>
             </button>
           </aside>
         )}
@@ -1507,6 +1669,8 @@ export default function PdfViewer({
               setNotePoint(null);
               setTool("select");
               setShowComments(true);
+              if (window.matchMedia("(max-width: 760px)").matches)
+                setPanel(null);
             }}
           >
             <h2>Add a note</h2>
